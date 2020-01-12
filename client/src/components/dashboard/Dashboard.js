@@ -50,7 +50,7 @@ class Game extends Component {
     this.placeBet = this.placeBet.bind(this);
     this.onLogoutClick = this.onLogoutClick.bind(this);
     $(()=>{
-        this.state.socket = new WebSocket("ws://localhost:3001/?token="+this.state.user.name);
+        this.state.socket = new WebSocket("ws://"+window.location.hostname+":3001/?token="+this.state.user.name);
         this.state.socket.onopen = function (event) {
             console.log("Connected to Server Game.");
         };
