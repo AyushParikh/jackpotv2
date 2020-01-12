@@ -135,7 +135,101 @@ router.post("/login", (req, res) => {
   });
 });
 
+function subBal(_id, amount){
+  amount=amount*-1;
+  User.updateOne({ _id }, {$inc: {balance:amount}}, function (err, user) {
+    if (err){
+      console.log("Id not found")
+    } else {
+      console.log(_id +" has been updated.")
+    }
+  })
+}
 
+function addBal(_id, amount){
+  User.updateOne({ _id }, {$inc: {balance:amount}}, function (err, user) {
+    if (err){
+      console.log("Id not found")
+    } else {
+      console.log(_id +" has been updated.")
+    }
+  })
+}
+
+function calcWinner(players, jackpot){
+	console.log(players);
+	var number = Math.ceil((Math.random() * jackpot*100));
+	var i = 0;
+	while( number>0){
+		number -= players[i][1];
+		i++;
+	}
+
+	console.log(players[i-1][0]);
+	return players[i-1][0];
+}
+
+const webSocketPort = 3001;
+var time = 30;
+var total_pot = 0;
+var players = [];
+var WebSocketServer = require("ws").Server, wss = new WebSocketServer({ port : webSocketPort });
+wss.on('close', function(){
+	console.log("disconnected");
+});
+
+wss.onmessage = function(event) {
+
+};
+
+wss.on('connection', (ws, req) => {
+	//ws.send(time + " seconds left till next Jackpot!");
+	ws.uuid = req.url.replace('/?token=', '')
+	ws.on('message', (event) => {
+		var data = event.split(",");
+		data[1]=Math.ceil(parseFloat(data[1]) * 100);
+		players.push(data);
+		subBal(data[0], parseFloat(data[1])/100);
+		total_pot += parseFloat(data[1])/100;
+		// wss_log.broadcast(data[0], data[1]/100)
+	});
+})
+
+wss.broadcast = function (time, pot, winner) {
+	if (winner != 0){
+		fs.writeFile('current_game.txt', "", function (err) { });
+		for (let ws of this.clients){
+			if (ws.uuid == winner){
+				ws.send("You won $" + pot*0.99 + "!");
+			} else {
+				ws.send("You lost.");
+			}
+		}
+	} else {
+		for (let ws of this.clients){
+			ws.send(time + " seconds left till next Jackpot! ($" + pot + ")");
+		}
+	}
+	
+}
+
+setInterval(()=>{
+	console.log(time + " seconds left till next Jackpot!");
+	wss.broadcast(time,total_pot,0);
+	if (time == 0){
+		if (players.length>0){
+			var winner = calcWinner(players,total_pot);
+			addBal(winner,total_pot*0.99);
+			wss.broadcast(time,total_pot,winner);
+			wss_games.broadcast(winner, total_pot);
+		}
+		total_pot = 0;
+		players = [];
+		time = 30;
+	} else {
+		time -= 1;
+	}
+}, 1000);
 
 
 
