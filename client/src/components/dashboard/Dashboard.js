@@ -31,7 +31,7 @@ class Dashboard extends Component {
 
         },
         success : (data) => {
-            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>"+Math.round(data.balance*100)/100+"</b>"  
+            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
         }
     }); 
   }
@@ -43,7 +43,7 @@ class Dashboard extends Component {
         <div className="row">
           <div className="landing-copy col s12 center-align">
             <h4 id="heading">  
-            <b>{user.name.split(" ")[0]}</b> Tokens: <b>${Math.round(this.state.user.balance*100)/100}</b>           
+            <b>{user.name.split(" ")[0]}</b> Tokens: <b>-</b>           
             </h4>
             <Game user = {this.state.user} onLogoutClick={this.onLogoutClick} />
           </div>
@@ -59,6 +59,7 @@ class Game extends Component {
     var socket = '';
     this.state = {
       user : this.props.user,
+      balance : this.props.user.balance,
       socket : socket
     }
     this.placeBet = this.placeBet.bind(this);
@@ -92,7 +93,7 @@ class Game extends Component {
 
                   },
                   success : (data) => {
-                      document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>"+Math.round(data.balance*100)/100+"</b>"  
+                      document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
                   }
               }); 
               
@@ -114,7 +115,7 @@ class Game extends Component {
 
                     },
                     success : (data) => {
-                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>"+Math.round(data.balance*100)/100+"</b>"  
+                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
                     }
                 }); 
 
@@ -132,6 +133,7 @@ class Game extends Component {
 
   placeBet(){
     var bet = document.getElementById("bet_amount").value;
+    console.log(this.state.balance);
 
     if (!bet){
       Swal.fire({
@@ -141,7 +143,7 @@ class Game extends Component {
           timer: 1500
       })
     }
-    if (bet > this.state.user.balance){
+    if (bet > this.state.balance){
       Swal.fire({
           icon: 'error',
           title: 'Your bet cannot exceed your balance',
@@ -168,23 +170,17 @@ class Game extends Component {
 
             },
             success : (data) => {
-                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>"+Math.round(data.balance*100)/100+"</b>"
+                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+                this.setState({
+                  balance : Math.floor(data.balance*100)/100
+                })
             }
         }); 
     }
   }
 
   handleKeyPress = (event) => {
-    if ((event.which < 48 || event.which > 57) && !(event.which == 8) && !(event.which >= 96 && event.which <= 105))
-    {
-      event.preventDefault();
-    }
 
-    var bet = document.getElementById("bet_amount").value;
-    if (bet > this.state.user.balance){
-      event.preventDefault();
-      return false;
-    }
   }
 
   render(){
@@ -197,6 +193,7 @@ class Game extends Component {
         <button id="bet" onClick={this.placeBet} className="btn btn-large waves-effect waves-light hoverable black accent-2">Place Bet</button>
         <p className="flow-text grey-text text-darken-1" id="msg">
         </p>
+        <HistoryGames user = {this.state.user}/>
         <button
               style={{
                 width: "150px",
@@ -210,6 +207,47 @@ class Game extends Component {
               Logout
             </button>
       </div>
+    )
+  }
+}
+
+class HistoryGames extends Component {
+  constructor(props){
+    super(props);
+
+    this.state = {
+      user : this.props.user,
+      socket_game : ""
+    }
+
+    $(()=>{
+        this.state.socket_game = new WebSocket("ws://"+window.location.hostname+":3003/?token="+this.state.user.id);
+        this.state.socket_game.onopen = function (event) {
+            console.log("Connected to Server Games.");
+        };
+        this.state.socket_game.onclose = function (event) {
+            console.log("Disconnected from Server Games.");
+        };
+        this.state.socket_game.onmessage = (event)=> {
+          console.log(event.data);
+          if (event.data == "clear#@#@"){
+            document.getElementById("gamespre").innerHTML="";
+          } else {
+            var span = document.createElement("span");
+            span.innerHTML = event.data;
+            document.getElementById("gamespre").appendChild(span);
+          }
+
+          //$('#messages').append("<br/>"+event.data);
+        }
+    });
+  }
+
+  render(){
+    return (
+        <div>
+            <div id="parent"><pre id="gamespre"></pre></div>
+        </div>
     )
   }
 }

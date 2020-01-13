@@ -4,6 +4,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const keys = require("../../config/keys");
 const passport = require("passport");
+const fs = require('fs');
+const readline = require('readline');
+const { exec } = require("child_process");
+
 
 // Load input validation
 const validateRegisterInput = require("../../validation/register");
@@ -65,17 +69,18 @@ router.post("/getbalance", (req, res) => {
 
 });
 
-router.post("/updatebalance", (req, res) => {
-  const _id = req.body.id;
-  const amount = req.body.amount;
-  User.updateOne({ _id }, {$inc: {balance:Math.round(amount*100)/100}}, function (err, user) {
-    if (err){
-      return res.status(404).json({ idnotfound: "Id not found" });
-    } else {
-      return res.status(200).json({success : _id +" has been updated."});
-    }
-  })
-});
+
+// router.post("/updatebalance", (req, res) => {
+//   const _id = req.body.id;
+//   const amount = req.body.amount;
+//   User.updateOne({ _id }, {$inc: {balance:Math.round(amount*100)/100}}, function (err, user) {
+//     if (err){
+//       return res.status(404).json({ idnotfound: "Id not found" });
+//     } else {
+//       return res.status(200).json({success : _id +" has been updated."});
+//     }
+//   })
+// });
 
 
 // @route POST api/users/login
@@ -170,7 +175,7 @@ function calcWinner(players, jackpot){
 }
 
 const webSocketPort = 3001;
-var time = 30;
+var time = 10;
 var total_pot = 0;
 var players = [];
 var WebSocketServer = require("ws").Server, wss = new WebSocketServer({ port : webSocketPort });
@@ -202,7 +207,11 @@ wss.broadcast = function (time, pot, winner) {
 			if (ws.uuid == winner){
 				ws.send("You won $" + Math.round(total_pot*0.99*100)/100 + "!");
 			} else {
-				ws.send("You lost.");
+        for (let player in players){
+          if (player[0]!=winner){
+            ws.send("You lost.");
+          }
+        }
 			}
 		}
 	} else {
@@ -221,7 +230,7 @@ setInterval(()=>{
 			var winner = calcWinner(players,Math.round(total_pot*100)/100);
 			addBal(winner,Math.round(total_pot*0.99*100)/100);
 			wss.broadcast(time,total_pot,winner);
-			//wss_games.broadcast(winner, total_pot);
+			wss_games.broadcast(winner, total_pot);
 		}
 		total_pot = 0;
 		players = [];
@@ -230,6 +239,76 @@ setInterval(()=>{
 		time -= 1;
 	}
 }, 1000);
+
+//-------------------------------------------------- history of games
+
+wss_games = new WebSocketServer({ port : webSocketPort+2 });
+wss_games.on('close', function(){
+	console.log("disconnected");
+});
+
+wss_games.onmessage = function(event) {
+
+};
+
+wss_games.on('connection', (ws, req) => {
+  //ws.send(time + " seconds left till next Jackpot!");
+  exec("tail -n 10 games.txt | tac > final_games.txt", (error, stdout, stderr) => {
+      if (error) {
+          console.log(`error: ${error.message}`);
+          return;
+      }
+      if (stderr) {
+          console.log(`stderr: ${stderr}`);
+          return;
+      }
+  });
+	var myInterface = readline.createInterface({
+		input: fs.createReadStream('final_games.txt')
+	});
+	
+	myInterface.on('line', function (line) {
+		ws.send(line);
+	});
+	ws.uuid = req.url.replace('/?token=', '')
+	ws.on('message', (event) => {
+
+	});
+})
+
+wss_games.broadcast = function (username, jackpot) {
+  var _id = username;
+  User.findOne({ _id }).then(user => {
+    fs.appendFile('games.txt', user.name + " has won $" + jackpot + "." + '\n', function (err) { });
+    for (let ws of this.clients){
+      ws.send("clear#@#@");
+      ws.send(user.name + " has won $" + jackpot + ".");
+    }
+  });
+
+  
+	for (let ws of this.clients){
+    User.findOne({ _id }).then(user => {
+        exec("tail -n 9 games.txt | tac > final_games.txt", (error, stdout, stderr) => {
+          if (error) {
+              console.log(`error: ${error.message}`);
+              return;
+          }
+          if (stderr) {
+              console.log(`stderr: ${stderr}`);
+              return;
+          }
+      });
+      var myInterface = readline.createInterface({
+        input: fs.createReadStream('final_games.txt')
+      });
+      
+      myInterface.on('line', function (line) {
+        ws.send(line);
+      });
+    });
+	}
+}
 
 
 
