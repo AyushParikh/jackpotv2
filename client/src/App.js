@@ -13,6 +13,8 @@ import Register from "./components/auth/Register";
 import Login from "./components/auth/Login";
 import PrivateRoute from "./components/private-route/PrivateRoute";
 import Dashboard from "./components/dashboard/Dashboard";
+import ParticlesBg from 'particles-bg';
+import icon from "./icon";
 
 import "./App.css";
 
@@ -35,18 +37,39 @@ if (localStorage.jwtToken) {
     window.location.href = "./login";
   }
 }
+
+let config = {
+  num: [4, 7],
+  rps: 0.3,
+  radius: [5, 40],
+  life: [1.5, 10],
+  v: [2, 3],
+  tha: [-50, 50],
+  alpha: [0.6, 0],
+  scale: [.1, 0.9],
+  body: icon,
+  position: "all",
+  //color: ["random", "#ff0000"],
+  cross: "dead",
+  random: 10
+};
+
+
 class App extends Component {
   render() {
     return (
       <Provider store={store}>
+        
         <Router>
           <div className="App">
             <Navbar />
+            <ParticlesBg type="custom" config={config} bg={true} />
             <Route exact path="/" component={Landing} />
             <Route exact path="/register" component={Register} />
             <Route exact path="/login" component={Login} />
             <Switch>
-              <PrivateRoute exact path="/dashboard" component={Dashboard} />
+            
+            <PrivateRoute exact path="/dashboard" component={Dashboard} />
             </Switch>
           </div>
         </Router>

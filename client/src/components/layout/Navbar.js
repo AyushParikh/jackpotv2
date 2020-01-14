@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
-import { Widget, addResponseMessage  } from 'react-chat-widget';
+// import { Widget, addResponseMessage  } from 'react-chat-widget';
 
 import 'react-chat-widget/lib/styles.css';
 

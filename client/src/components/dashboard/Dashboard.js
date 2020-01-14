@@ -93,7 +93,12 @@ class Game extends Component {
 
                   },
                   success : (data) => {
+                    try {
                       document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
+                    } catch (error) {
+                      console.log(error);
+                      this.state.socket.close();
+                    }
                   }
               }); 
               
@@ -115,13 +120,23 @@ class Game extends Component {
 
                     },
                     success : (data) => {
+                      try {
                         document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
+                      } catch (error) {
+                        console.log(error);
+                        this.state.socket.close();
+                      }
                     }
                 }); 
 
           }
-            var p =document.getElementById("server_game");
-            p.innerHTML=event.data;
+            try {
+              var p =document.getElementById("server_game");
+              p.innerHTML=event.data;
+            } catch (error) {
+              this.state.socket.close();
+            }
+
         }
     });
   }
@@ -185,7 +200,7 @@ class Game extends Component {
 
   render(){
     return (
-      <div>
+      <div className="input-field col s30">
         <p className="flow-text grey-text text-darken-1" id="server_game">
           Connecting to server...
         </p>
@@ -231,14 +246,23 @@ class HistoryGames extends Component {
         this.state.socket_game.onmessage = (event)=> {
           console.log(event.data);
           if (event.data == "clear#@#@"){
-            document.getElementById("gamespre").innerHTML="";
+            try {
+              document.getElementById("gamespre").innerHTML="";
+            } catch (error) {
+              console.log(error);
+              this.state.socket.close();
+            }
+            
           } else {
-            var span = document.createElement("span");
-            span.innerHTML = event.data;
-            document.getElementById("gamespre").appendChild(span);
+            try {
+              var span = document.createElement("span");
+              span.innerHTML = event.data;
+              document.getElementById("gamespre").appendChild(span);
+            } catch (error) {
+              console.log(error);
+              this.state.socket.close();
+            }
           }
-
-          //$('#messages').append("<br/>"+event.data);
         }
     });
   }

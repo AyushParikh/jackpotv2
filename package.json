@@ -22,6 +22,7 @@
     "jquery": "^3.4.1",
     "jsonwebtoken": "^8.3.0",
     "mongoose": "^5.3.11",
+    "particles-bg": "^2.4.7",
     "passport": "^0.4.0",
     "passport-jwt": "^4.0.0",
     "react-chat-widget": "^2.1.5",
