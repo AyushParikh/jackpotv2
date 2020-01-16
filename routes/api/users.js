@@ -29,32 +29,54 @@ router.post("/register", (req, res) => {
     return res.status(400).json(errors);
   }
 
-  User.findOne({ email: req.body.email }).then(user => {
+  User.findOne({ name: req.body.name }).then(user => {
     if (user) {
-      return res.status(400).json({ email: "Email already exists" });
+      return res.status(400).json({ name: "Name already exists" });
     } else {
-      const newUser = new User({
-        name: req.body.name,
-        email: (req.body.email).toLowerCase(),
-        password: req.body.password
-      });
-
-      // Hash password before saving in database
-      bcrypt.genSalt(10, (err, salt) => {
-        bcrypt.hash(newUser.password, salt, (err, hash) => {
-          if (err) throw err;
-          newUser.password = hash;
-          newUser
-            .save()
-            .then(user => res.json(user))
-            .catch(err => console.log(err));
-        });
+      User.findOne({ email: req.body.email }).then(user => {
+        if (user) {
+          return res.status(400).json({ email: "Email already exists" });
+        } else {
+          const newUser = new User({
+            name: req.body.name,
+            email: (req.body.email).toLowerCase(),
+            password: req.body.password
+          });
+    
+          // Hash password before saving in database
+          bcrypt.genSalt(10, (err, salt) => {
+            bcrypt.hash(newUser.password, salt, (err, hash) => {
+              if (err) throw err;
+              newUser.password = hash;
+              newUser
+                .save()
+                .then(user => res.json(user))
+                .catch(err => console.log(err));
+            });
+          });
+        }
       });
     }
   });
+
 });
 
 router.post("/getbalance", (req, res) => {
+  const _id = req.body.id;
+
+  User.findOne({ _id }).then(user => {
+    // Check if user exists
+
+    if (!user) {
+      return res.status(404).json({ idnotfound: "Id not found" });
+    }
+
+    return res.status(200).json({balance : user.balance})
+  });
+
+});
+
+router.post("/getusers", (req, res) => {
   const _id = req.body.id;
 
   User.findOne({ _id }).then(user => {
@@ -90,6 +112,8 @@ router.post("/login", (req, res) => {
   // Form validation
   const { errors, isValid } = validateLoginInput(req.body);
 
+  update_pair_table();
+
   // Check validation
   if (!isValid) {
     return res.status(400).json(errors);
@@ -121,7 +145,7 @@ router.post("/login", (req, res) => {
           payload,
           keys.secretOrKey,
           {
-            expiresIn: 31556926 // 1 year in seconds
+            expiresIn: 86400 // 1 year in seconds
           },
           (err, token) => {
             res.json({
@@ -140,6 +164,32 @@ router.post("/login", (req, res) => {
   });
 });
 
+var username_id_pair = {};
+
+function update_pair_table(){
+  User.find({ }).then(users => {
+    for (let i in users){
+      var info = {};
+  
+      info.name = users[i].name;
+      info.email = users[i].email;
+      username_id_pair[users[i]._id] = info;
+    }
+  });
+}
+update_pair_table();
+
+var players_dic = {};
+//send player list + bet back to users
+function getLeaderboard(){
+  var temp_players = {};
+  for (let _id in players_dic){
+    temp_players[username_id_pair[_id]["name"]] = players_dic[_id]/100;
+  }
+
+  return temp_players;
+}
+//subtract balance from user
 function subBal(_id, amount){
   amount=amount*-1;
   User.updateOne({ _id }, {$inc: {balance:Math.round(amount*100)/100}}, function (err, user) {
@@ -151,6 +201,7 @@ function subBal(_id, amount){
   })
 }
 
+//add balance to user
 function addBal(_id, amount){
   User.updateOne({ _id }, {$inc: {balance:Math.round(amount*100)/100}}, function (err, user) {
     if (err){
@@ -161,9 +212,13 @@ function addBal(_id, amount){
   })
 }
 
+
+
+//calculate the winner here
 function calcWinner(players, jackpot){
-	console.log(players);
-	var number = Math.ceil((Math.random() * jackpot*100));
+  console.log(players);
+  
+	var number = Math.ceil((Math.random() * round(jackpot, 2).toFixed(2) *100));
 	var i = 0;
 	while( number>0){
 		number -= players[i][1];
@@ -175,7 +230,7 @@ function calcWinner(players, jackpot){
 }
 
 const webSocketPort = 3001;
-var time = 10;
+var time = 30;
 var total_pot = 0;
 var players = [];
 var WebSocketServer = require("ws").Server, wss = new WebSocketServer({ port : webSocketPort });
@@ -193,9 +248,14 @@ wss.on('connection', (ws, req) => {
 	ws.on('message', (event) => {
 		var data = event.split(",");
 		data[1]=Math.ceil(parseFloat(data[1]) * 100);
-		players.push(data);
+    players.push(data);
+
+
+    players_dic[data[0]] = (players_dic[data[0]] || 0) + data[1];
+
 		subBal(data[0], Math.round(parseFloat(data[1]))/100  );
-		total_pot += parseFloat(data[1])/100;
+    total_pot += parseFloat(data[1])/100;
+    wss_leader.broadcast();
 		// wss_log.broadcast(data[0], data[1]/100)
 	});
 })
@@ -216,29 +276,36 @@ wss.broadcast = function (time, pot, winner) {
 		}
 	} else {
 		for (let ws of this.clients){
-			ws.send(time + " seconds left till next Jackpot! ($" + pot + ")");
+			ws.send(round(time, 1).toFixed(1) + " seconds left till next Jackpot! ($" + pot + ")");
 		}
 	}
 	
 }
 
+function round(value, precision) {
+  var multiplier = Math.pow(10, precision || 0);
+  return Math.round(value * multiplier) / multiplier;
+}
+
 setInterval(()=>{
-	console.log(time + " seconds left till next Jackpot!");
-	wss.broadcast(time,Math.round(total_pot*100)/100,0);
-	if (time == 0){
+  //console.log(round(time, 1).toFixed(1) + " seconds left till next Jackpot!");
+
+	wss.broadcast(round(time, 1).toFixed(1),Math.round(total_pot*100)/100,0);
+	if (Math.round(time) == 0){
 		if (players.length>0){
 			var winner = calcWinner(players,Math.round(total_pot*100)/100);
 			addBal(winner,Math.round(total_pot*0.99*100)/100);
-			wss.broadcast(time,total_pot,winner);
+			wss.broadcast(round(time, 1).toFixed(1),total_pot,winner);
 			wss_games.broadcast(winner, total_pot);
 		}
 		total_pot = 0;
-		players = [];
-		time = 30;
+    players = [];
+    players_dic = {};
+		time = round(30, 1).toFixed(1);
 	} else {
-		time -= 1;
+		time -= 0.1;
 	}
-}, 1000);
+}, 100);
 
 //-------------------------------------------------- history of games
 
@@ -279,10 +346,10 @@ wss_games.on('connection', (ws, req) => {
 wss_games.broadcast = function (username, jackpot) {
   var _id = username;
   User.findOne({ _id }).then(user => {
-    fs.appendFile('games.txt', user.name + " has won $" + jackpot + "." + '\n', function (err) { });
+    fs.appendFile('games.txt', user.name + " has won $" + round(jackpot, 2).toFixed(2) + "." + '\n', function (err) { });
     for (let ws of this.clients){
       ws.send("clear#@#@");
-      ws.send(user.name + " has won $" + jackpot + ".");
+      ws.send(user.name + " has won $" + round(jackpot, 2).toFixed(2) + ".");
     }
   });
 
@@ -310,6 +377,30 @@ wss_games.broadcast = function (username, jackpot) {
 	}
 }
 
+//---------------------------------------------------------------- leaderboard
 
+wss_leader = new WebSocketServer({ port : webSocketPort+3 });
+wss_leader.on('close', function(){
+	console.log("disconnected");
+});
+
+wss_leader.onmessage = function(event) {
+
+};
+
+wss_leader.on('connection', (ws, req) => {
+  ws.send(JSON.stringify(getLeaderboard()));
+	ws.uuid = req.url.replace('/?token=', '')
+	ws.on('message', (event) => {
+
+	});
+})
+
+wss_leader.broadcast = function () {
+  var leaderboard = JSON.stringify(getLeaderboard());
+	for (let ws of this.clients){
+    ws.send(leaderboard);
+	}
+}
 
 module.exports = router;

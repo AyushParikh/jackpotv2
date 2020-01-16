@@ -24,7 +24,7 @@ display: flex;
   position: absolute;
 }
 #messagespre{
-  width:33%;
+  width:100%;
   background: #303030;
   color: #ffffff;
   padding: 10px 16px;

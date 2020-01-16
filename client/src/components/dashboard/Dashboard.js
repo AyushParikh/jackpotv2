@@ -74,8 +74,8 @@ class Game extends Component {
             console.log("Disconnected from Server Game.");
         };
         this.state.socket.onmessage = (event)=> {
-            console.log(event.data);
             if ((event.data).includes("You won")){
+              document.getElementById("messagespre").innerHTML = "";
               Swal.fire({
               title: event.data,
               width: 600,
@@ -103,6 +103,7 @@ class Game extends Component {
               }); 
               
           } else if ((event.data).includes("You lost.")) {
+              document.getElementById("messagespre").innerHTML = "";
               Swal.fire({
                 title: event.data,
                 width: 600,
@@ -148,7 +149,6 @@ class Game extends Component {
 
   placeBet(){
     var bet = document.getElementById("bet_amount").value;
-    console.log(this.state.balance);
 
     if (!bet){
       Swal.fire({
@@ -209,6 +209,7 @@ class Game extends Component {
         <p className="flow-text grey-text text-darken-1" id="msg">
         </p>
         <HistoryGames user = {this.state.user}/>
+        <LeaderBoard user = {this.state.user}/>
         <button
               style={{
                 width: "150px",
@@ -244,8 +245,8 @@ class HistoryGames extends Component {
             console.log("Disconnected from Server Games.");
         };
         this.state.socket_game.onmessage = (event)=> {
-          console.log(event.data);
-          if (event.data == "clear#@#@"){
+
+          if (event.data === "clear#@#@"){
             try {
               document.getElementById("gamespre").innerHTML="";
             } catch (error) {
@@ -272,6 +273,57 @@ class HistoryGames extends Component {
         <div>
             <div id="parent"><pre id="gamespre"></pre></div>
         </div>
+    )
+  }
+}
+
+class LeaderBoard extends Component {
+  constructor(props){
+    super(props);
+
+    this.state = {
+      user : this.props.user,
+      socket_game : ""
+    }
+
+    this.parseLeaderboard = this.parseLeaderboard.bind(this);
+
+    $(()=>{
+        this.state.socket_game = new WebSocket("ws://"+window.location.hostname+":3004/?token="+this.state.user.id);
+        this.state.socket_game.onopen = function (event) {
+            console.log("Connected to Leaderboard.");
+        };
+        this.state.socket_game.onclose = function (event) {
+            console.log("Disconnected from Leaderboard.");
+        };
+        this.state.socket_game.onmessage = (event)=> {
+          try {
+            this.parseLeaderboard(event.data); //send leaderboard data to be parsed
+          } catch (error) {
+            console.log(error);
+            this.state.socket.close();
+          }
+        }
+    });
+  }
+
+  parseLeaderboard(data){
+    var leaderboard = JSON.parse(data);
+
+    if (leaderboard.length === 0){
+      console.log("here");
+    }
+
+    // var span = document.createElement("span");
+    // span.innerHTML = event.data;
+    // document.getElementById("messagespre").appendChild(span);
+  }
+
+  render(){
+    return (
+      <div>
+        <div id="parent"><pre id="messagespre"></pre></div>
+      </div>
     )
   }
 }
