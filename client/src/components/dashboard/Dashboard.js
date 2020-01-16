@@ -309,14 +309,19 @@ class LeaderBoard extends Component {
 
   parseLeaderboard(data){
     var leaderboard = JSON.parse(data);
+    if (Object.keys(leaderboard).length !== 0){
+      // console.log(leaderboard);
+      document.getElementById("messagespre").innerHTML = "";
 
-    if (leaderboard.length === 0){
-      console.log("here");
-    }
+      for (let key in leaderboard){
+        var span = document.createElement("span");
+        span.innerHTML = key + "------------------------ $" + leaderboard[key];
+        document.getElementById("messagespre").appendChild(span);
+      }
 
-    // var span = document.createElement("span");
-    // span.innerHTML = event.data;
-    // document.getElementById("messagespre").appendChild(span);
+
+    } 
+
   }
 
   render(){
