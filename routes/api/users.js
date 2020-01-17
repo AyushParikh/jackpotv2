@@ -346,10 +346,10 @@ wss_games.on('connection', (ws, req) => {
 wss_games.broadcast = function (username, jackpot) {
   var _id = username;
   User.findOne({ _id }).then(user => {
-    fs.appendFile('games.txt', user.name + " has won $" + round(jackpot, 2).toFixed(2) + "." + '\n', function (err) { });
+    fs.appendFile('games.txt', user.name + " has won $" + round(jackpot, 2).toFixed(2) + " " + Date() + '\n', function (err) { });
     for (let ws of this.clients){
       ws.send("clear#@#@");
-      ws.send(user.name + " has won $" + round(jackpot, 2).toFixed(2) + ".");
+      ws.send(user.name + " has won $" + round(jackpot, 2).toFixed(2) + " " + Date());
     }
   });
 

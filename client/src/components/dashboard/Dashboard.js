@@ -28,10 +28,46 @@ class Dashboard extends Component {
             id:this.state.user.id
         },
         error: function(error) {
-
+          $.ajax({
+              method: "POST",
+              url: "/api/users/getbalance/",
+              data: {
+                  id:this.state.user.id
+              },
+              error: function(error) {
+                $.ajax({
+                    method: "POST",
+                    url: "/api/users/getbalance/",
+                    data: {
+                        id:this.state.user.id
+                    },
+                    error: function(error) {
+                      
+                    },
+                    success : (data) => {
+                      try {
+                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+                      } catch (error) {
+                        
+                      }       
+                    }
+                });
+              },
+              success : (data) => {
+                try {
+                  document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+                } catch (error) {
+                  
+                }   
+              }
+          });
         },
         success : (data) => {
-            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
+          try {
+            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+          } catch (error) {
+            
+          }   
         }
     }); 
   }
@@ -60,7 +96,9 @@ class Game extends Component {
     this.state = {
       user : this.props.user,
       balance : this.props.user.balance,
-      socket : socket
+      socket : socket,
+      socket_game : '',
+      socket_leaderboard : ''
     }
     this.placeBet = this.placeBet.bind(this);
     this.onLogoutClick = this.onLogoutClick.bind(this);
@@ -75,7 +113,11 @@ class Game extends Component {
         };
         this.state.socket.onmessage = (event)=> {
             if ((event.data).includes("You won")){
-              document.getElementById("messagespre").innerHTML = "";
+              try {
+                document.getElementById("tbodyleader").innerHTML = "";
+              } catch (error) {
+                console.log(error);
+              }       
               Swal.fire({
               title: event.data,
               width: 600,
@@ -97,13 +139,17 @@ class Game extends Component {
                       document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
                     } catch (error) {
                       console.log(error);
-                      this.state.socket.close();
+                      //this.state.socket.close();
                     }
                   }
               }); 
               
           } else if ((event.data).includes("You lost.")) {
-              document.getElementById("messagespre").innerHTML = "";
+              try {
+                document.getElementById("tbodyleader").innerHTML = "";
+              } catch (error) {
+                console.log(error);
+              }       
               Swal.fire({
                 title: event.data,
                 width: 600,
@@ -125,7 +171,7 @@ class Game extends Component {
                         document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
                       } catch (error) {
                         console.log(error);
-                        this.state.socket.close();
+                        //this.state.socket.close();
                       }
                     }
                 }); 
@@ -204,24 +250,37 @@ class Game extends Component {
         <p className="flow-text grey-text text-darken-1" id="server_game">
           Connecting to server...
         </p>
-        <input id="bet_amount" type="number" step="1" min="0" max={this.state.user.balance} onKeyPress={this.handleKeyPress} placeholder="Enter a bet"></input>
-        <button id="bet" onClick={this.placeBet} className="btn btn-large waves-effect waves-light hoverable black accent-2">Place Bet</button>
-        <p className="flow-text grey-text text-darken-1" id="msg">
-        </p>
-        <HistoryGames user = {this.state.user}/>
-        <LeaderBoard user = {this.state.user}/>
-        <button
-              style={{
-                width: "150px",
-                borderRadius: "3px",
-                letterSpacing: "1.5px",
-                marginTop: "1rem"
-              }}
+        <input style={{ width: "500px" }} id="bet_amount" type="number" step="1" min="0" max={this.state.user.balance} onKeyPress={this.handleKeyPress} placeholder="Enter a bet"></input><br/>
+        
+        <button id="bet"                 style={{
+                  width: "140px",
+                  borderRadius: "3px",
+                  letterSpacing: "1.5px"
+                }} onClick={this.placeBet} className="btn btn-large waves-effect waves-light hoverable black accent-2">Place Bet</button> &nbsp; &nbsp; &nbsp; &nbsp;
+      <button
+                style={{
+                  width: "140px",
+                  borderRadius: "3px",
+                  letterSpacing: "1.5px"
+                }}
               onClick={this.onLogoutClick}
               className="btn btn-large waves-effect waves-light hoverable blue accent-3"
             >
               Logout
             </button>
+        <p className="flow-text grey-text text-darken-1" id="msg">
+        </p>
+        <div id="container">
+          <div id="history">
+          <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard}/>
+          <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
+          </div>
+          <div id="leaderboard">
+          
+          </div>     
+        </div>
+
+
       </div>
     )
   }
@@ -233,7 +292,7 @@ class HistoryGames extends Component {
 
     this.state = {
       user : this.props.user,
-      socket_game : ""
+      socket_game : this.props.socket_game
     }
 
     $(()=>{
@@ -248,20 +307,45 @@ class HistoryGames extends Component {
 
           if (event.data === "clear#@#@"){
             try {
-              document.getElementById("gamespre").innerHTML="";
+              document.getElementById("tbodyleaderhistory").innerHTML="";
             } catch (error) {
-              console.log(error);
-              this.state.socket.close();
+              //console.log(error);
+              //this.state.socket.close();
             }
             
           } else {
             try {
-              var span = document.createElement("span");
-              span.innerHTML = event.data;
-              document.getElementById("gamespre").appendChild(span);
+
+              var temp = event.data.split(" ");
+
+              var tdid = document.createElement("td");
+              tdid["data-title"] = "ID";
+              tdid.innerHTML = temp[0];
+      
+              var tdname = document.createElement("td");
+              tdname["data-title"] = "Name";
+              tdname.innerHTML = temp[3];
+      
+              var tdlink = document.createElement("td");
+              tdlink["data-title"] = "Link";
+              tdlink.innerHTML = "##########";
+
+              var tdtime = document.createElement("td");
+              tdtime["data-title"] = "Time";
+              tdtime.innerHTML = temp[8];
+      
+              var tr = document.createElement("tr");
+              tr.appendChild(tdid);
+              tr.appendChild(tdname);
+              tr.appendChild(tdtime);
+              tr.appendChild(tdlink);
+      
+              document.getElementById("tbodyleaderhistory").appendChild(tr);
+
+
             } catch (error) {
-              console.log(error);
-              this.state.socket.close();
+              //console.log(error);
+              //this.state.socket.close();
             }
           }
         }
@@ -271,8 +355,23 @@ class HistoryGames extends Component {
   render(){
     return (
         <div>
-            <div id="parent"><pre id="gamespre"></pre></div>
-        </div>
+            <div id="demo">
+          <div className="table-responsive-vertical shadow-z-1">
+            <table id="table" className="table table-hover table-mc-light-blue">
+                <thead id="thead">
+                  <tr>
+                    <th>Winner</th>
+                    <th>Pot</th>
+                    <th>Time</th>
+                    <th>Hash</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyleaderhistory">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div> 
     )
   }
 }
@@ -283,25 +382,25 @@ class LeaderBoard extends Component {
 
     this.state = {
       user : this.props.user,
-      socket_game : ""
+      socket_leaderboard : this.props.socket_leaderboard
     }
 
     this.parseLeaderboard = this.parseLeaderboard.bind(this);
 
     $(()=>{
-        this.state.socket_game = new WebSocket("ws://"+window.location.hostname+":3004/?token="+this.state.user.id);
-        this.state.socket_game.onopen = function (event) {
+        this.state.socket_leaderboard = new WebSocket("ws://"+window.location.hostname+":3004/?token="+this.state.user.id);
+        this.state.socket_leaderboard.onopen = function (event) {
             console.log("Connected to Leaderboard.");
         };
-        this.state.socket_game.onclose = function (event) {
+        this.state.socket_leaderboard.onclose = function (event) {
             console.log("Disconnected from Leaderboard.");
         };
-        this.state.socket_game.onmessage = (event)=> {
+        this.state.socket_leaderboard.onmessage = (event)=> {
           try {
             this.parseLeaderboard(event.data); //send leaderboard data to be parsed
           } catch (error) {
             console.log(error);
-            this.state.socket.close();
+            //this.state.socket.close();
           }
         }
     });
@@ -311,15 +410,32 @@ class LeaderBoard extends Component {
     var leaderboard = JSON.parse(data);
     if (Object.keys(leaderboard).length !== 0){
       // console.log(leaderboard);
-      document.getElementById("messagespre").innerHTML = "";
+      document.getElementById("tbodyleader").innerHTML = "";
 
-      for (let key in leaderboard){
-        var span = document.createElement("span");
-        span.innerHTML = key + "------------------------ $" + leaderboard[key];
-        document.getElementById("messagespre").appendChild(span);
+      const sorted = Object.entries(leaderboard) // object to array of arrays
+                     .sort((a, b) => b[1] - a[1]); // sort descending by 2nd element of the arrays
+
+      for (var i = 0; i < sorted.length; i++){
+        var tdid = document.createElement("td");
+        tdid["data-title"] = "ID";
+        tdid.innerHTML = i + 1;
+
+        var tdname = document.createElement("td");
+        tdname["data-title"] = "Name";
+        tdname.innerHTML = sorted[i][0];
+
+        var tdlink = document.createElement("td");
+        tdlink["data-title"] = "Link";
+        tdlink.innerHTML = sorted[i][1];
+
+        var tr = document.createElement("tr");
+        tr.appendChild(tdid);
+        tr.appendChild(tdname);
+        tr.appendChild(tdlink);
+
+        document.getElementById("tbodyleader").appendChild(tr);
+        
       }
-
-
     } 
 
   }
@@ -327,7 +443,22 @@ class LeaderBoard extends Component {
   render(){
     return (
       <div>
-        <div id="parent"><pre id="messagespre"></pre></div>
+        <div id="demo">
+          <div className="table-responsive-vertical shadow-z-1">
+          <table id="table" className="table table-hover table-mc-light-blue">
+            
+              <thead id="thead">
+                <tr>
+                  <th>Rank</th>
+                  <th>Name</th>
+                  <th>Bet</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyleader">
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     )
   }
