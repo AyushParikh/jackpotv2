@@ -22,6 +22,22 @@ const UserSchema = new Schema({
   balance: {
     type: Number,
     default: 500
+  },
+  private_key: {
+    type: String,
+    required:true
+  },
+  address: {
+    type: String,
+    required:true
+  },
+  public_key: {
+    type: String,
+    required:true
+  },
+  wif: {
+    type: String,
+    required:true
   }
 });
 

@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import { logoutUser } from "../../actions/authActions";
 import $ from 'jquery';
 // ES6 Modules or TypeScript
-import Swal from 'sweetalert2'
+import Swal from 'sweetalert2';
 
 
 class Dashboard extends Component {
@@ -15,6 +15,7 @@ class Dashboard extends Component {
     }
 
     this.onLogoutClick = this.onLogoutClick.bind(this);
+
   }
   onLogoutClick () {
     this.props.logoutUser();
@@ -75,7 +76,7 @@ class Dashboard extends Component {
   render() {
     const { user } = this.props.auth;
     return (
-      <div style={{ height: "75vh" }} className="container valign-wrapper">
+      <div style={{ height: "75vh" }} id="dashboarddiv">
         <div className="row">
           <div className="landing-copy col s12 center-align">
             <h4 id="heading">  
@@ -103,6 +104,7 @@ class Game extends Component {
     this.placeBet = this.placeBet.bind(this);
     this.onLogoutClick = this.onLogoutClick.bind(this);
     this.handleKeyPress = this.handleKeyPress.bind(this);
+    this.openCashier=this.openCashier.bind(this);
     $(()=>{
         this.state.socket = new WebSocket("ws://"+window.location.hostname+":3001/?token="+this.state.user.id);
         this.state.socket.onopen = function (event) {
@@ -244,6 +246,67 @@ class Game extends Component {
 
   }
 
+  openCashier(){
+    $.ajax({
+        method: "POST",
+        url: "/api/users/getaddress/",
+        data: {
+            id:this.state.user.id
+        },
+        error: function(error) {
+
+        },
+        success : (data) => {
+          Swal.fire({
+            title: 'Cashier',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            background : "#e0e0e0",
+            cancelButtonColor: '#d33',
+            cancelButtonText: "Withdraw",
+            confirmButtonText: 'Deposit'
+          }).then((result) => {
+            if (result.value) {
+              Swal.fire({
+                title: 'Bitcoin Deposit Address\n\n'+data.address,
+                width: 800,
+                background : "#e0e0e0",
+                showClass: {
+                  popup: 'animated bounce'
+                },
+                hideClass: {
+                  popup: 'animated bounceOut'
+                },
+                inputAttributes: {
+                  autocapitalize: 'off'
+                },
+                confirmButtonText: 'OK',
+                showLoaderOnConfirm: true
+              })
+            } else {
+              Swal.mixin({
+                input: 'text',
+                confirmButtonText: 'Next &rarr;',
+                showCancelButton: true,
+                progressSteps: ['1', '2']
+              }).queue([
+                {
+                  title: 'Withdrawal Address'
+                },
+                'Amount'
+              ]).then((result) => {
+                if (result.value) {
+                  const answers = JSON.stringify(result.value)
+                  console.log(answers);
+                }
+              })
+            }
+          })
+        }
+    }); 
+
+  }
+
   render(){
     return (
       <div className="input-field col s30">
@@ -257,6 +320,11 @@ class Game extends Component {
                   borderRadius: "3px",
                   letterSpacing: "1.5px"
                 }} onClick={this.placeBet} className="btn btn-large waves-effect waves-light hoverable black accent-2">Place Bet</button> &nbsp; &nbsp; &nbsp; &nbsp;
+        <button id="cashier"                 style={{
+          width: "140px",
+          borderRadius: "3px",
+          letterSpacing: "1.5px"
+        }} onClick={this.openCashier} className="btn btn-large waves-effect waves-light hoverable green accent-2">Cashier</button> &nbsp; &nbsp; &nbsp; &nbsp;
       <button
                 style={{
                   width: "140px",
