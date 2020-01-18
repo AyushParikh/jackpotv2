@@ -47,7 +47,7 @@ class Dashboard extends Component {
                     },
                     success : (data) => {
                       try {
-                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
                       } catch (error) {
                         
                       }       
@@ -56,7 +56,7 @@ class Dashboard extends Component {
               },
               success : (data) => {
                 try {
-                  document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+                  document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
                 } catch (error) {
                   
                 }   
@@ -65,7 +65,7 @@ class Dashboard extends Component {
         },
         success : (data) => {
           try {
-            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
           } catch (error) {
             
           }   
@@ -80,7 +80,7 @@ class Dashboard extends Component {
         <div className="row">
           <div className="landing-copy col s12 center-align">
             <h4 id="heading">  
-            <b>{user.name.split(" ")[0]}</b> Tokens: <b>-</b>           
+            <b>{user.name.split(" ")[0]}</b> Bits: <b>-</b>           
             </h4>
             <Game user = {this.state.user} onLogoutClick={this.onLogoutClick} />
           </div>
@@ -138,7 +138,7 @@ class Game extends Component {
                   },
                   success : (data) => {
                     try {
-                      document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
+                      document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
                     } catch (error) {
                       console.log(error);
                       //this.state.socket.close();
@@ -170,7 +170,7 @@ class Game extends Component {
                     },
                     success : (data) => {
                       try {
-                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"  
+                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
                       } catch (error) {
                         console.log(error);
                         //this.state.socket.close();
@@ -233,7 +233,7 @@ class Game extends Component {
 
             },
             success : (data) => {
-                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Tokens: <b>$"+Math.floor(data.balance*100)/100+"</b>"
+                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
                 this.setState({
                   balance : Math.floor(data.balance*100)/100
                 })
@@ -271,12 +271,6 @@ class Game extends Component {
                 title: 'Bitcoin Deposit Address\n\n'+data.address,
                 width: 800,
                 background : "#e0e0e0",
-                showClass: {
-                  popup: 'animated bounce'
-                },
-                hideClass: {
-                  popup: 'animated bounceOut'
-                },
                 inputAttributes: {
                   autocapitalize: 'off'
                 },
@@ -293,11 +287,48 @@ class Game extends Component {
                 {
                   title: 'Withdrawal Address'
                 },
-                'Amount'
+                {
+                  title: 'Amount',
+                  input: 'text',
+                },
               ]).then((result) => {
                 if (result.value) {
-                  const answers = JSON.stringify(result.value)
-                  console.log(answers);
+                  const answers = result.value
+                  var address = answers[0];
+                  var amount = answers[1];
+                  try {
+                    amount=parseFloat(amount);
+                    $.ajax({
+                        method: "POST",
+                        url: "/api/users/getbalance/",
+                        data: {
+                            id:this.state.user.id
+                        },
+                        error: function(error) {
+            
+                        },
+                        success : (data) => {
+                            this.setState({
+                              balance : Math.floor(data.balance*100)/100
+                            })
+                        }
+                    }); 
+                    if (isNaN(amount) || amount > this.state.balance || amount < 20000){
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Please enter a valid amount above 20000 bits.'
+                      })
+                    } else {
+
+                    }
+                  } catch (error) {
+                    Swal.fire({
+                      icon: 'error',
+                      title: 'Oops...',
+                      text: 'Please enter a valid amount.'
+                    })
+                  }
                 }
               })
             }

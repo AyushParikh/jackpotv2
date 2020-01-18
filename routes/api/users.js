@@ -347,7 +347,7 @@ wss.broadcast = function (time, pot, winner) {
 		//fs.writeFile('current_game.txt', "", function (err) { });
 		for (let ws of this.clients){
 			if (ws.uuid == winner){
-				ws.send("You won $" + Math.round(total_pot*0.99*100)/100 + "!");
+				ws.send("You won " + Math.round(total_pot*0.99*100)/100 + " bits!");
 			} else {
         for (let player in players){
           if (player[0]!=winner){
@@ -358,7 +358,7 @@ wss.broadcast = function (time, pot, winner) {
 		}
 	} else {
 		for (let ws of this.clients){
-			ws.send(round(time, 1).toFixed(1) + " seconds left till next Jackpot! ($" + pot + ")");
+			ws.send(round(time, 1).toFixed(1) + " seconds left till next Jackpot! (" + pot + " bits)");
 		}
 	}
 	
@@ -428,10 +428,10 @@ wss_games.on('connection', (ws, req) => {
 wss_games.broadcast = function (username, jackpot) {
   var _id = username;
   User.findOne({ _id }).then(user => {
-    fs.appendFile('games.txt', user.name + " has won $" + round(jackpot, 2).toFixed(2) + " " + Date() + '\n', function (err) { });
+    fs.appendFile('games.txt', user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date() + '\n', function (err) { });
     for (let ws of this.clients){
       ws.send("clear#@#@");
-      ws.send(user.name + " has won $" + round(jackpot, 2).toFixed(2) + " " + Date());
+      ws.send(user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date());
     }
   });
 
