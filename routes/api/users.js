@@ -14,51 +14,71 @@ const validateLoginInput = require("../../validation/login");
 const User = require("../../models/User");
 const axios = require('axios');
 
+$ADMINID = "5e23d62da63b33487d57fe51";
+$ADMINADDRESS = "mn8M56QV8hskmizaBnB7FY8sxjciDvgw5e";
 
-function sendtx(_id, to, amount){
-
+function sendtx(_id, to, amount, original_id){
   User.findOne({ _id }).then(user => {
+    
     if (!user) {
-      return res.status(404).json({ idnotfound: "User not found" });
+      return { idnotfound: "User not found" };
     }
     var from = user.address;
     var public_key = user.public_key;
     var private_key = user.private_key;
-    var cmd = 'curl -d \'{"inputs": [{"addresses": ["'+from+'"]}], "outputs": [{"addresses": ["'+to+'"], "value": '+amount+'}]}\' http://api.blockcypher.com/v1/btc/main/txs/new';
+    var cmd = 'curl -d \'{"inputs": [{"addresses": ["'+from+'"]}], "outputs": [{"addresses": ["'+to+'"], "value": '+amount+'}]}\' http://api.blockcypher.com/v1/btc/test3/txs/new';
 
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
           console.log(`error: ${error.message}`);
-          return;
+          return 400;
       }
       if (stderr) {
-          console.log(`stderr: ${stderr}`);
+          //console.log(`stderr: ${stderr}`);
       }
       if (stdout) {
         var send = JSON.parse(stdout);
-        send.tx.fees = 1;
         for (var i = 0; i < send.tosign.length; i++){
           exec('./signer.exe ' + send.tosign[i] + ' ' + private_key, (error, stdout, stderr) => {
             if (error) {
                 console.log(`error: ${error.message}`);
-                return;
+                return 400;
             }
             if (stderr) {
-                console.log(`stderr: ${stderr}`);
-                return;
+                //console.log(`stderr: ${stderr}`);
+                return 400;
             }
             if (stdout) {
               if (!send.signatures){
                 send.signatures = [stdout.replace(/^\s+|\s+$/g, '')];
                 send.pubkeys = [public_key];
               } else {
-                send.signatures.push(stdout);
+                send.signatures.push(stdout.replace(/^\s+|\s+$/g, ''));
                 send.pubkeys.push(public_key);
               }
             }
             if (i == send.tosign.length){
-              exec('curl -d \''+JSON.stringify(send)+'\' http://api.blockcypher.com/v1/btc/main/txs/send', (error, stdout, stderr) => {
-                console.log(stdout);
+              var subbed = false;
+              exec("curl -d '"+JSON.stringify(send)+"' http://api.blockcypher.com/v1/btc/test3/txs/send", (error, stdout, stderr) => {
+                if ("errors" in send){
+                  console.log('errors: ' + JSON.stringify(send.errors));
+                  console.log("Something went wrong sending bitcoin: ", original_id, amount);
+                  return 400;
+                } else {
+                  //console.log(send);
+                  if (original_id == true){
+                    console.log("Successfully deposited bitcoin to admin: ", original_id, amount);
+                  } else {
+                    console.log("Successfully withdrew bitcoin: ", original_id, amount);
+                    if (subbed == false){
+                      console.log("Subtracting amount.");
+                      subBal(original_id, amount+50000);
+                      subbed = true;
+                    }
+                        
+                  }
+                  return 200;
+                }
               });
             }
           });
@@ -67,6 +87,42 @@ function sendtx(_id, to, amount){
     });
   });
 }
+
+router.post("/withdraw", (req, res) => {
+  var _id = req.body._id;
+  var to = req.body.address;
+  var amount = parseFloat(req.body.amount);
+  var password = req.body.password;
+
+  console.log("Withdrawing: " , _id,to,amount,password);
+
+  //check if they have enough balance
+  User.findOne({ _id }).then(user => {
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({ idnotfound: "Id not found" });
+    }
+
+    if (amount <= user.balance){
+      // Check password
+      bcrypt.compare(password, user.password).then(isMatch => {
+        if (isMatch) {
+          //admin ID
+          sendtx($ADMINID, to, amount, _id);
+          return res
+            .status(200)
+            .json({ success: "Success" });
+        } else {
+          return res
+            .status(400)
+            .json({ passwordincorrect: "Password incorrect" });
+        }
+      });
+    } else {
+      return res.status(400).json({ balance: "Not enough balance." });
+    }
+  });
+});
 
 // @route POST api/users/register
 // @desc Register user
@@ -89,7 +145,7 @@ router.post("/register", (req, res) => {
         if (user) {
           return res.status(400).json({ email: "Email already exists" });
         } else {
-          axios.post('https://api.blockcypher.com/v1/btc/main/addrs', {
+          axios.post('https://api.blockcypher.com/v1/btc/test3/addrs', {
           })
           .then(function (response) {
             console.log(response.data);
@@ -342,12 +398,20 @@ wss.on('connection', (ws, req) => {
 	});
 })
 
+function calctax(winner, pot){
+  var winner_bet = players_dic[winner]/100;
+  var winner_profit = pot-winner_bet;
+  var tax = winner_profit*0.01;
+  return tax;
+}
+
 wss.broadcast = function (time, pot, winner) {
 	if (winner != 0){
 		//fs.writeFile('current_game.txt', "", function (err) { });
 		for (let ws of this.clients){
 			if (ws.uuid == winner){
-				ws.send("You won " + Math.round(total_pot*0.99*100)/100 + " bits!");
+        var tax = calctax(winner, total_pot);
+				ws.send("You won " + Math.round((total_pot-tax)*100)/100 + " bits!");
 			} else {
         for (let player in players){
           if (player[0]!=winner){
@@ -375,8 +439,9 @@ setInterval(()=>{
 	wss.broadcast(round(time, 1).toFixed(1),Math.round(total_pot*100)/100,0);
 	if (Math.round(time) == 0){
 		if (players.length>0){
-			var winner = calcWinner(players,Math.round(total_pot*100)/100);
-			addBal(winner,Math.round(total_pot*0.99*100)/100);
+      var winner = calcWinner(players,Math.round(total_pot*100)/100);
+      var tax = calctax(winner, total_pot);
+			addBal(winner,Math.round((total_pot-tax)*100)/100);
 			wss.broadcast(round(time, 1).toFixed(1),total_pot,winner);
 			wss_games.broadcast(winner, total_pot);
 		}
@@ -501,8 +566,8 @@ function getAllAddress(){
       address_id_pair[user[i].address] = user[i]._id;
       id_address_pair[user[i]._id] = user[i].address;
     }
-    console.log("All addresses: " + all_addresses);
-    console.log("All addresses id pairs: " + JSON.stringify(address_id_pair));
+    // console.log("All addresses: " + all_addresses);
+    // console.log("All addresses id pairs: " + JSON.stringify(address_id_pair));
   });
 }
 
@@ -531,7 +596,9 @@ blockchain_socket.onmessage = (event)=> {
       if (!used_hashes.includes(hash)){
         used_hashes.push(hash);
         var _id = address_id_pair[recv_addrs[i][0]];
-        addBal(_id, recv_addrs[i][1]);
+        if (_id != $ADMINID){
+          unconfed[hash] = [_id,recv_addrs[i][1]];
+        }
       }
     }
   } catch (error) {
@@ -539,6 +606,26 @@ blockchain_socket.onmessage = (event)=> {
     //this.state.socket.close();
   }
 }
+
+var unconfed = {};
+setInterval(()=>{
+  for (let key in unconfed){
+    exec("curl https://blockchain.info/rawtx/"+key, (error, stdout, stderr) => {
+      try {
+        var data = JSON.parse(stdout);
+        if (!("block_height" in data)){
+          addBal(unconfed[key][0], unconfed[key][1]);
+          addBal($ADMINID, unconfed[key][1]);
+          sendtx(unconfed[key][0], $ADMINADDRESS, unconfed[key][1]-20000, true);
+          delete unconfed[key];
+        }
+      } catch (error) {
+        console.log("parsing error");
+      }
+
+    });
+  }
+}, 5000);
 
 
 

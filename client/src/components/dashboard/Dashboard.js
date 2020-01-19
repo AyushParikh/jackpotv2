@@ -15,7 +15,6 @@ class Dashboard extends Component {
     }
 
     this.onLogoutClick = this.onLogoutClick.bind(this);
-
   }
   onLogoutClick () {
     this.props.logoutUser();
@@ -223,6 +222,9 @@ class Game extends Component {
     } else {
         document.getElementById("msg").innerHTML = "";
         this.state.socket.send(this.state.user.id+","+bet);
+        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+this.state.balance-bet+"</b>"
+        document.getElementById("bet").disabled = true;
+        setTimeout(function() { document.getElementById("bet").disabled = false; }, 2000);
         $.ajax({
             method: "POST",
             url: "/api/users/getbalance/",
@@ -275,6 +277,7 @@ class Game extends Component {
                   autocapitalize: 'off'
                 },
                 confirmButtonText: 'OK',
+                footer: '<b>Your balance will show after 1 <a target="_blank" href="https://www.blockchain.com/btc/address/'+data.address+'">confirmation.</a></b>',
                 showLoaderOnConfirm: true
               })
             } else {
@@ -282,20 +285,26 @@ class Game extends Component {
                 input: 'text',
                 confirmButtonText: 'Next &rarr;',
                 showCancelButton: true,
-                progressSteps: ['1', '2']
+                progressSteps: ['1', '2', '3']
               }).queue([
                 {
-                  title: 'Withdrawal Address'
+                  title: 'Withdrawal Address',
+                  footer: '<b>50,000 bits will be used for withdrawal fees.</b>',
                 },
                 {
                   title: 'Amount',
                   input: 'text',
                 },
+                {
+                  title: 'Enter your password',
+                  input: 'password'
+                }
               ]).then((result) => {
                 if (result.value) {
                   const answers = result.value
                   var address = answers[0];
                   var amount = answers[1];
+                  var password = answers[2];
                   try {
                     amount=parseFloat(amount);
                     $.ajax({
@@ -313,14 +322,62 @@ class Game extends Component {
                             })
                         }
                     }); 
-                    if (isNaN(amount) || amount > this.state.balance || amount < 20000){
+                    if (isNaN(amount) || amount > this.state.balance || amount < 50000){
                       Swal.fire({
                         icon: 'error',
                         title: 'Oops...',
-                        text: 'Please enter a valid amount above 20000 bits.'
+                        text: 'Please enter a valid amount above 50000 bits.'
                       })
                     } else {
-
+                      $.ajax({
+                          method: "POST",
+                          url: "/api/users/withdraw/",
+                          data: {
+                              _id:this.state.user.id,
+                              address:address,
+                              amount:amount-50000,
+                              password:password
+                          }
+                      }).then(function( data ) {
+                        let timerInterval
+                        Swal.fire({
+                          title: 'Your withdrawal is being processed',
+                          html: amount + " bits sent to " + address,
+                          timer: 2000,
+                          timerProgressBar: true,
+                          onBeforeOpen: () => {
+                            Swal.showLoading()
+                          },
+                          onClose: () => {
+                            clearInterval(timerInterval)
+                          }
+                        }).then((result) => {
+                          if (
+                            /* Read more about handling dismissals below */
+                            result.dismiss === Swal.DismissReason.timer
+                          ) {
+                            console.log('I was closed by the timer') // eslint-disable-line
+                          }
+                        })
+                        $.ajax({
+                            method: "POST",
+                            url: "/api/users/getbalance/",
+                            data: {
+                                id:this.state.user.id
+                            },
+                            error: function(error) {
+        
+                            },
+                            success : (data) => {
+                              try {
+                                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
+                              } catch (error) {
+                                console.log(error);
+                                //this.state.socket.close();
+                              }
+                            }
+                        }); 
+                      });
                     }
                   } catch (error) {
                     Swal.fire({
