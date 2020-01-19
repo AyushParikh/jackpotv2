@@ -627,6 +627,26 @@ setInterval(()=>{
   }
 }, 5000);
 
+//------------------------------------------------------------ chat room
 
+wss_chat = new WebSocketServer({ port : webSocketPort+4 });
+wss_chat.on('close', function(){
+	console.log("disconnected");
+});
+
+wss_chat.on('connection', (ws, req) => {
+  ws.uuid = req.url.replace('/?token=', '')
+  ws.on('message', function incoming(data) {
+    wss_chat.clients.forEach(function each(client) {
+      var data2 = JSON.parse(data);
+      var sender_name = username_id_pair[JSON.parse(data).author].name;
+      var text = sender_name + ": " + data2.data.text;
+      if (JSON.parse(data).author!==client.uuid){
+        client.send(text);
+      }
+      
+    });
+  });
+});
 
 module.exports = router;

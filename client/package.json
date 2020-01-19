@@ -9,6 +9,7 @@
     "jwt-decode": "^2.2.0",
     "particles-bg": "^2.4.7",
     "react": "^16.6.3",
+    "react-chat-window": "^1.2.1",
     "react-dom": "^16.6.3",
     "react-redux": "^5.1.1",
     "react-router-dom": "^4.3.1",

@@ -5,7 +5,7 @@ import { logoutUser } from "../../actions/authActions";
 import $ from 'jquery';
 // ES6 Modules or TypeScript
 import Swal from 'sweetalert2';
-
+import {Launcher} from 'react-chat-window'
 
 class Dashboard extends Component {
   constructor(props){
@@ -294,10 +294,12 @@ class Game extends Component {
                 {
                   title: 'Amount',
                   input: 'text',
+                  footer: '<b>50,000 bits will be used for withdrawal fees.</b>'
                 },
                 {
                   title: 'Enter your password',
-                  input: 'password'
+                  input: 'password',
+                  footer: '<b>50,000 bits will be used for withdrawal fees.</b>'
                 }
               ]).then((result) => {
                 if (result.value) {
@@ -320,65 +322,78 @@ class Game extends Component {
                             this.setState({
                               balance : Math.floor(data.balance*100)/100
                             })
+                            if (isNaN(amount) || amount > this.state.balance || amount <= 50000){
+                              Swal.fire({
+                                icon: 'error',
+                                title: 'Oops...',
+                                text: 'Please enter a valid amount above 50000 bits.'
+                              })
+                            } else {
+                              $.ajax({
+                                  method: "POST",
+                                  url: "/api/users/withdraw/",
+                                  data: {
+                                      _id:this.state.user.id,
+                                      address:address,
+                                      amount:amount-50000,
+                                      password:password
+                                  },
+                                  error: function (error){
+                                    if (error.responseJSON.passwordincorrect){
+                                      Swal.fire({
+                                        icon: 'error',
+                                        title: 'Oops...',
+                                        text: 'Incorrect password.',
+                                        footer: '<a href>Why do I have this issue?</a>'
+                                      })
+                                    }
+                                  },
+                                  success: ()=>{
+                                    console.log("successssss");
+                                    $.ajax({
+                                      method: "POST",
+                                      url: "/api/users/getbalance/",
+                                      data: {
+                                          id:this.state.user.id
+                                      },
+                                      error: function(error) {
+                                        
+                                      },
+                                      success : (data) => {
+                                        try {
+                                          document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
+                                        } catch (error) {
+                                          console.log(error);
+                                        }
+                                      }
+                                    }); 
+                                  }
+                              }).then(function( data ) {
+                                let timerInterval
+                                Swal.fire({
+                                  title: 'Your withdrawal is being processed',
+                                  html: amount + " bits sent to " + address,
+                                  timer: 2000,
+                                  timerProgressBar: true,
+                                  onBeforeOpen: () => {
+                                    Swal.showLoading()
+                                  },
+                                  onClose: () => {
+                                    clearInterval(timerInterval)
+                                  }
+                                }).then((result) => {
+                                  if (
+                                    /* Read more about handling dismissals below */
+                                    result.dismiss === Swal.DismissReason.timer
+                                  ) {
+                                    //console.log('I was closed by the timer') // eslint-disable-line
+                                  }
+                                })
+                              });
+                            }
                         }
                     }); 
-                    if (isNaN(amount) || amount > this.state.balance || amount < 50000){
-                      Swal.fire({
-                        icon: 'error',
-                        title: 'Oops...',
-                        text: 'Please enter a valid amount above 50000 bits.'
-                      })
-                    } else {
-                      $.ajax({
-                          method: "POST",
-                          url: "/api/users/withdraw/",
-                          data: {
-                              _id:this.state.user.id,
-                              address:address,
-                              amount:amount-50000,
-                              password:password
-                          }
-                      }).then(function( data ) {
-                        let timerInterval
-                        Swal.fire({
-                          title: 'Your withdrawal is being processed',
-                          html: amount + " bits sent to " + address,
-                          timer: 2000,
-                          timerProgressBar: true,
-                          onBeforeOpen: () => {
-                            Swal.showLoading()
-                          },
-                          onClose: () => {
-                            clearInterval(timerInterval)
-                          }
-                        }).then((result) => {
-                          if (
-                            /* Read more about handling dismissals below */
-                            result.dismiss === Swal.DismissReason.timer
-                          ) {
-                            console.log('I was closed by the timer') // eslint-disable-line
-                          }
-                        })
-                        $.ajax({
-                            method: "POST",
-                            url: "/api/users/getbalance/",
-                            data: {
-                                id:this.state.user.id
-                            },
-                            error: function(error) {
-        
-                            },
-                            success : (data) => {
-                              try {
-                                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
-                              } catch (error) {
-                                console.log(error);
-                                //this.state.socket.close();
-                              }
-                            }
-                        }); 
-                      });
-                    }
+                    
                   } catch (error) {
                     Swal.fire({
                       icon: 'error',
@@ -430,13 +445,14 @@ class Game extends Component {
           <div id="history">
           <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard}/>
           <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
+          
           </div>
           <div id="leaderboard">
           
           </div>     
         </div>
 
-
+        <ChatRoom user = {this.state.user} />
       </div>
     )
   }
@@ -617,6 +633,112 @@ class LeaderBoard extends Component {
         </div>
       </div>
     )
+  }
+}
+
+class ChatRoom extends Component {
+  constructor(props){
+    super(props);
+    this.state = {
+      messageList: [],
+      socket : '',
+      user : this.props.user,
+      mobile : false
+    };
+
+    this._onMessageWasSent = this._onMessageWasSent.bind(this);
+
+    $(()=>{
+      this.state.socket = new WebSocket("ws://"+window.location.hostname+":3005/?token="+this.state.user.id);
+      this.state.socket.onopen = function (event) {
+          console.log("Connected to Chat Room.");
+      };
+      this.state.socket.onclose = function (event) {
+          console.log("Disconnected from Chat Room.");
+      };
+      this.state.socket.onmessage = (event)=> {
+        try {
+          this._sendMessage(event.data);
+        } catch (error) {
+          console.log(error);
+          //this.state.socket.close();
+        }
+      }
+  });
+  }
+
+  componentDidMount(){
+    var isMobile = {
+      Android: function() {
+          return navigator.userAgent.match(/Android/i);
+      },
+      BlackBerry: function() {
+          return navigator.userAgent.match(/BlackBerry/i);
+      },
+      iOS: function() {
+          return navigator.userAgent.match(/iPhone|iPad|iPod/i);
+      },
+      Opera: function() {
+          return navigator.userAgent.match(/Opera Mini/i);
+      },
+      Windows: function() {
+          return navigator.userAgent.match(/IEMobile/i) || navigator.userAgent.match(/WPDesktop/i);
+      },
+      any: function() {
+          return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
+      }
+    };
+    if( isMobile.any() ){ 
+      this.setState({
+        mobile:true
+      })
+    };
+  }
+
+  _onMessageWasSent(message) {
+    var new_message = JSON.parse(JSON.stringify(message));
+    new_message.author = this.state.user.id;
+    this.state.socket.send(JSON.stringify(new_message));
+    this.setState({
+      messageList: [...this.state.messageList, message]
+    })
+  }
+ 
+  _sendMessage(text) {
+    if (text.length > 0) {
+      this.setState({
+        messageList: [...this.state.messageList, {
+          author: 'them',
+          type: 'text',
+          data: { text }
+        }]
+      })
+    }
+  }
+
+  render(){
+    if (this.state.mobile == true){
+      return (
+        <div>
+
+        </div>
+      )
+    } else {
+      return (
+        <div>
+          <Launcher
+            agentProfile={{
+              teamName: 'English Chat'
+            }}
+            onMessageWasSent={this._onMessageWasSent.bind(this)}
+            messageList={this.state.messageList}
+            showEmoji={false}
+            mute={true}
+          />
+        </div>
+      )
+    }
+
   }
 }
   
