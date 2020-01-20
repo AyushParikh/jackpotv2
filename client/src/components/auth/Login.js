@@ -6,7 +6,6 @@ import { loginUser } from "../../actions/authActions";
 import classnames from "classnames";
 import Swal from 'sweetalert2';
 
-
 class Login extends Component {
   constructor() {
     super();
@@ -42,7 +41,7 @@ class Login extends Component {
 
   }
 
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps (nextProps) {
     if (nextProps.auth.isAuthenticated) {
       const Toast = Swal.mixin({
         toast: true,

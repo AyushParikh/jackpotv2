@@ -13,6 +13,23 @@ const validateLoginInput = require("../../validation/login");
 // Load User model
 const User = require("../../models/User");
 const axios = require('axios');
+const nodemailer = require('nodemailer');
+
+
+const senderMail = 'ayushparikh.jackpot@gmail.com';
+
+const emailTransporter = nodemailer.createTransport({
+            host: 'smtp.mail.gmail.com',
+            port: 465,
+            service:'gmail',
+            secure: false,
+            auth: {
+               user: senderMail,
+               pass: 'Jackpot123@'
+            },
+            debug: false,
+            logger: false
+});
 
 $ADMINID = "5e23d62da63b33487d57fe51";
 $ADMINADDRESS = "mn8M56QV8hskmizaBnB7FY8sxjciDvgw5e";
@@ -137,11 +154,14 @@ router.post("/register", (req, res) => {
     return res.status(400).json(errors);
   }
 
-  User.findOne({ name: req.body.name }).then(user => {
+  var new_name = new RegExp(req.body.name,"i");
+  User.findOne({ name: new_name }).then(user => {
+
     if (user) {
       return res.status(400).json({ name: "Name already exists" });
     } else {
-      User.findOne({ email: req.body.email }).then(user => {
+      var new_email = new RegExp(req.body.email,"i");
+      User.findOne({ email: new_email }).then(user => {
         if (user) {
           return res.status(400).json({ email: "Email already exists" });
         } else {
@@ -183,6 +203,40 @@ router.post("/register", (req, res) => {
       });
     }
   });
+
+});
+
+router.post("/support", (req, res) => {
+  const name = req.body.username;
+  const email = req.body.email;
+  const message = req.body.message;
+
+  var new_name = new RegExp(name,"i");
+
+  User.findOne({ name : new_name }).then(user => {
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({ idnotfound: "Id not found" });
+    } else if ((user.email).toLowerCase() === email.toLowerCase()){
+      var mailOptions = {
+        from: '"Ayush <JackPot>" ',
+        to: 'nanotechedit@gmail.com',
+        subject: 'JackPot Support Request: ' + name,
+        text: "User's email: " + email + "\n\n" + message
+      };
+      emailTransporter.sendMail(mailOptions, function(error, info){
+        if (error) {
+          console.log(error);
+        } else {
+          console.log('Email sent: ' + info.response);
+        }
+      });
+    } else {
+      return res.status(404).send("That email does not match the given username.");
+    }
+  });
+
+  return res.status(200);
 
 });
 

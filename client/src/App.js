@@ -56,6 +56,10 @@ let config = {
 
 
 class App extends Component {
+  constructor(props){
+    super(props);
+    console.log("%cCareful. This is a browser feature intended for developers. If someone told you to copy and paste something here to enable a jackpot feature or do a \"hack\", it is a scam and will give them access to your account!", "background-color: red; color: yellow; font-size:30px;");
+  }
   render() {
     return (
       <Provider store={store}>

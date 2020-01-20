@@ -5,7 +5,7 @@ import { logoutUser } from "../../actions/authActions";
 import $ from 'jquery';
 // ES6 Modules or TypeScript
 import Swal from 'sweetalert2';
-import {Launcher} from 'react-chat-window'
+import {Launcher} from 'react-chat-window';
 
 class Dashboard extends Component {
   constructor(props){
@@ -105,7 +105,9 @@ class Game extends Component {
     this.handleKeyPress = this.handleKeyPress.bind(this);
     this.openCashier=this.openCashier.bind(this);
     $(()=>{
-        this.state.socket = new WebSocket("ws://"+window.location.hostname+":3001/?token="+this.state.user.id);
+        this.setState({
+          socket : new WebSocket("ws://"+window.location.hostname+":3001/?token="+this.state.user.id)
+        })
         this.state.socket.onopen = function (event) {
             console.log("Connected to Server Game.");
         };
@@ -468,7 +470,9 @@ class HistoryGames extends Component {
     }
 
     $(()=>{
-        this.state.socket_game = new WebSocket("ws://"+window.location.hostname+":3003/?token="+this.state.user.id);
+        this.setState({
+          socket_game : new WebSocket("ws://"+window.location.hostname+":3003/?token="+this.state.user.id)
+        })
         this.state.socket_game.onopen = function (event) {
             console.log("Connected to Server Games.");
         };
@@ -560,7 +564,9 @@ class LeaderBoard extends Component {
     this.parseLeaderboard = this.parseLeaderboard.bind(this);
 
     $(()=>{
-        this.state.socket_leaderboard = new WebSocket("ws://"+window.location.hostname+":3004/?token="+this.state.user.id);
+        this.setState({
+          socket_leaderboard : new WebSocket("ws://"+window.location.hostname+":3004/?token="+this.state.user.id)
+        })
         this.state.socket_leaderboard.onopen = function (event) {
             console.log("Connected to Leaderboard.");
         };
@@ -649,7 +655,10 @@ class ChatRoom extends Component {
     this._onMessageWasSent = this._onMessageWasSent.bind(this);
 
     $(()=>{
-      this.state.socket = new WebSocket("ws://"+window.location.hostname+":3005/?token="+this.state.user.id);
+      this.setState({
+        socket : new WebSocket("ws://"+window.location.hostname+":3005/?token="+this.state.user.id)
+      })
+
       this.state.socket.onopen = function (event) {
           console.log("Connected to Chat Room.");
       };
@@ -717,7 +726,7 @@ class ChatRoom extends Component {
   }
 
   render(){
-    if (this.state.mobile == true){
+    if (this.state.mobile){
       return (
         <div>
 
