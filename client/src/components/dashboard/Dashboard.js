@@ -46,7 +46,7 @@ class Dashboard extends Component {
                     },
                     success : (data) => {
                       try {
-                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
+                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
                       } catch (error) {
                         
                       }       
@@ -55,7 +55,7 @@ class Dashboard extends Component {
               },
               success : (data) => {
                 try {
-                  document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
+                  document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
                 } catch (error) {
                   
                 }   
@@ -64,7 +64,7 @@ class Dashboard extends Component {
         },
         success : (data) => {
           try {
-            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
+            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
           } catch (error) {
             
           }   
@@ -121,11 +121,23 @@ class Game extends Component {
               } catch (error) {
                 console.log(error);
               }       
-              Swal.fire({
-              title: event.data,
-              width: 600,
-              padding: '3em',
-              timer: 1500
+
+              var data = event.data.split(" ");
+              const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                onOpen: (toast) => {
+                  toast.addEventListener('mouseenter', Swal.stopTimer)
+                  toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+              })
+              
+              Toast.fire({
+                icon: 'success',
+                title: '+ ' + data[2] + ' bits'
               })
 
               $.ajax({
@@ -139,7 +151,7 @@ class Game extends Component {
                   },
                   success : (data) => {
                     try {
-                      document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
+                      document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"  
                     } catch (error) {
                       console.log(error);
                       //this.state.socket.close();
@@ -153,12 +165,23 @@ class Game extends Component {
               } catch (error) {
                 console.log(error);
               }       
-              Swal.fire({
-                title: event.data,
-                width: 600,
-                padding: '3em',
-                timer: 1500
-                })
+
+              const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                onOpen: (toast) => {
+                  toast.addEventListener('mouseenter', Swal.stopTimer)
+                  toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+              })
+              
+              Toast.fire({
+                icon: 'warning',
+                title: event.data
+              })
 
                 $.ajax({
                     method: "POST",
@@ -171,7 +194,7 @@ class Game extends Component {
                     },
                     success : (data) => {
                       try {
-                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
+                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"  
                       } catch (error) {
                         console.log(error);
                         //this.state.socket.close();
@@ -224,7 +247,7 @@ class Game extends Component {
     } else {
         document.getElementById("msg").innerHTML = "";
         this.state.socket.send(this.state.user.id+","+bet);
-        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+this.state.balance-bet+"</b>"
+        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(this.state.balance-bet).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
         document.getElementById("bet").disabled = true;
         setTimeout(function() { document.getElementById("bet").disabled = false; }, 2000);
         $.ajax({
@@ -237,7 +260,7 @@ class Game extends Component {
 
             },
             success : (data) => {
-                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"
+                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
                 this.setState({
                   balance : Math.floor(data.balance*100)/100
                 })
@@ -363,7 +386,7 @@ class Game extends Component {
                                       },
                                       success : (data) => {
                                         try {
-                                          document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+Math.floor(data.balance*100)/100+"</b>"  
+                                          document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"  
                                         } catch (error) {
                                           console.log(error);
                                         }

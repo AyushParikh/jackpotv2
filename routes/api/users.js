@@ -12,6 +12,7 @@ const validateRegisterInput = require("../../validation/register");
 const validateLoginInput = require("../../validation/login");
 // Load User model
 const User = require("../../models/User");
+const Stats = require("../../models/Stats");
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 
@@ -138,6 +139,24 @@ router.post("/withdraw", (req, res) => {
     } else {
       return res.status(400).json({ balance: "Not enough balance." });
     }
+  });
+});
+
+function numberWithCommas(x) {
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+router.get("/getstats", (req, res) => {
+  
+  Stats.find({ }).then(stat => {
+    var data = {};
+    data.offsite = numberWithCommas(Math.round(stat[0].offsite/100000000));
+    data.onsite = numberWithCommas(Math.round(stat[0].onsite/100000000));
+    data.totalpots = numberWithCommas(stat[0].totalpots);
+    data.totalusers = numberWithCommas(stat[0].totalusers);
+
+    data.profit = numberWithCommas(Math.round( stat[0].profit * 100000000 ) / 100000000);
+    return res.status(200).json(data);
   });
 });
 
@@ -278,7 +297,6 @@ router.post("/getaddress", (req, res) => {
   } else {
     return res.status(400).json({address : "Not found. Try Again."})
   }
-
 });
 
 
@@ -434,20 +452,34 @@ wss.onmessage = function(event) {
 
 };
 
+function validatebet(data){
+  data[1]=Math.ceil(parseFloat(data[1]) * 100);
+  var _id = data[0];
+  try {
+    User.findOne({ _id }, function(err, result){if (err){console.log("Validation Bet Failed.");}}).then(user => {
+      if (user){
+        if (user.balance >= Math.round(data[1]/100)){
+          players.push(data);
+          players_dic[data[0]] = (players_dic[data[0]] || 0) + data[1];
+          subBal(data[0], Math.round(parseFloat(data[1]))/100  );
+          total_pot += parseFloat(data[1])/100;
+          wss_leader.broadcast();
+        }
+      }
+    });
+  } catch (error) {
+    console.log("Validation Bet Failed.");
+  }
+}
+
 wss.on('connection', (ws, req) => {
 	//ws.send(time + " seconds left till next Jackpot!");
 	ws.uuid = req.url.replace('/?token=', '')
 	ws.on('message', (event) => {
-		var data = event.split(",");
-		data[1]=Math.ceil(parseFloat(data[1]) * 100);
-    players.push(data);
-
-
-    players_dic[data[0]] = (players_dic[data[0]] || 0) + data[1];
-
-		subBal(data[0], Math.round(parseFloat(data[1]))/100  );
-    total_pot += parseFloat(data[1])/100;
-    wss_leader.broadcast();
+    var data = event.split(",");
+    validatebet(data);
+		
+    
 		// wss_log.broadcast(data[0], data[1]/100)
 	});
 })
@@ -456,6 +488,11 @@ function calctax(winner, pot){
   var winner_bet = players_dic[winner]/100;
   var winner_profit = pot-winner_bet;
   var tax = winner_profit*0.01;
+  var _id = "5e2663551c9d440000aef609";
+  Stats.updateOne({ _id }, {$inc: {profit:tax/2}}, function (err, user) {
+
+  })
+
   return tax;
 }
 
@@ -476,7 +513,7 @@ wss.broadcast = function (time, pot, winner) {
 		}
 	} else {
 		for (let ws of this.clients){
-			ws.send(round(time, 1).toFixed(1) + " seconds left till next Jackpot! (" + pot + " bits)");
+			ws.send(round(time, 1).toFixed(1) + " seconds left till next Jackpot! (" + numberWithCommas(pot) + " bits)");
 		}
 	}
 	
@@ -497,7 +534,8 @@ setInterval(()=>{
       var tax = calctax(winner, total_pot);
 			addBal(winner,Math.round((total_pot-tax)*100)/100);
 			wss.broadcast(round(time, 1).toFixed(1),total_pot,winner);
-			wss_games.broadcast(winner, total_pot);
+      wss_games.broadcast(winner, total_pot);
+      wss_leader.broadcast();
 		}
 		total_pot = 0;
     players = [];

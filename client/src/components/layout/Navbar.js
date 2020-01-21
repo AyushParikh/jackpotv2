@@ -62,7 +62,17 @@ class Navbar extends Component {
   }
 
   showStats(){
-    
+    $.ajax({
+      method: "GET",
+      url: "/api/users/getstats/",
+      success: function(data){
+        
+        Swal.fire({
+          width:600,
+          html: '<div class="modal-content" role="document"><div class="modal-header"></div><div class="modal-body"><div class="stats-container"><main class="main-container"><div class="title-container"><h4>GAME STATISTICS</h4></div><div><div class="table-responsive"><table class="stats-table table table-condensed"><tbody><tr><td>Users</td><td></td><td>'+data.totalusers+'</td></tr><tr><td>Total Pots</td><td></td><td>'+data.totalpots+'</td></tr><tr><td>Onsite Bankroll</td><td></td><td>Ƀ '+data.onsite+'</td></tr><tr><td>Offsite Bankroll</td><td></td><td>Ƀ '+data.offsite+'</td></tr><tr><td>Site Profit</td><td></td><td>Ƀ '+data.profit+'</td></tr></tbody></table></div></div></main></div></div></div>',
+        })
+      }
+    })
   }
   render() {
     return (
