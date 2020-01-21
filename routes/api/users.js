@@ -32,8 +32,8 @@ const emailTransporter = nodemailer.createTransport({
             logger: false
 });
 
-$ADMINID = "5e23d62da63b33487d57fe51";
-$ADMINADDRESS = "mn8M56QV8hskmizaBnB7FY8sxjciDvgw5e";
+$ADMINID = "5e2777eaa654251431b68e4f";
+$ADMINADDRESS = "1JLsZP9SDgv2it27EAFtHDYwT6EW869MFA";
 
 function sendtx(_id, to, amount, original_id){
   User.findUser.findOne({ _id }).then(user => {
