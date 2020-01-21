@@ -67,7 +67,7 @@ class App extends Component {
         <Router>
           <div className="App">
             <Navbar />
-            <ParticlesBg type="custom" config={config} bg={true} />
+            {/* <ParticlesBg type="custom" config={config} bg={true} /> */}
             <Route exact path="/" component={Landing} />
             <Route exact path="/register" component={Register} />
             <Route exact path="/login" component={Login} />

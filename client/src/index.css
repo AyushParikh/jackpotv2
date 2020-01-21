@@ -1,6 +1,8 @@
 body {
   margin: 0;
   padding: 0;
+  background-color: #434343;
+  color:white;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
     "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
@@ -137,7 +139,7 @@ pre span:before {
 }
 .table > thead > tr > th {
   font-weight: 400;
-  color: #757575;
+  color: white;
   vertical-align: bottom;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
@@ -241,7 +243,7 @@ pre span:before {
 .link-effect-13 a::before {
   width: 2px;
   height: 100%;
-  background: white;
+  background: #434343;
   content: "";
   position: absolute;
   left: 0;
@@ -258,7 +260,7 @@ pre span:before {
 .link-effect-13 a::after {
   width: 2px;
   height: 100%;
-  background: white;
+  background:#434343;
   content: "";
   position: absolute;
   right: 0px;
@@ -287,3 +289,16 @@ pre span:before {
   -webkit-transform: translateX(0);
   transform: translateX(0);
 }
+@-webkit-keyframes autofill {
+  0%,100% {
+      color: white;
+      background: transparent;
+  }
+}
+
+input:-webkit-autofill {
+  -webkit-animation-delay: 1s; /* Safari support - any positive time runs instantly */
+  -webkit-animation-name: autofill;
+  -webkit-animation-fill-mode: both;
+}
+

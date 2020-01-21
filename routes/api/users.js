@@ -36,7 +36,7 @@ $ADMINID = "5e23d62da63b33487d57fe51";
 $ADMINADDRESS = "mn8M56QV8hskmizaBnB7FY8sxjciDvgw5e";
 
 function sendtx(_id, to, amount, original_id){
-  User.findOne({ _id }).then(user => {
+  User.findUser.findOne({ _id }).then(user => {
     
     if (!user) {
       return { idnotfound: "User not found" };
@@ -143,20 +143,26 @@ router.post("/withdraw", (req, res) => {
 });
 
 function numberWithCommas(x) {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  var parts = x.toString().split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
 }
 
 router.get("/getstats", (req, res) => {
   
   Stats.find({ }).then(stat => {
     var data = {};
-    data.offsite = numberWithCommas(Math.round(stat[0].offsite/100000000));
-    data.onsite = numberWithCommas(Math.round(stat[0].onsite/100000000));
-    data.totalpots = numberWithCommas(stat[0].totalpots);
-    data.totalusers = numberWithCommas(stat[0].totalusers);
-
-    data.profit = numberWithCommas(Math.round( stat[0].profit * 100000000 ) / 100000000);
-    return res.status(200).json(data);
+    //exec("curl https://blockchain.info/rawaddr/"+$ADMINADDRESS, (error, stdout, stderr) => { //use this for main net
+    exec("curl https://api.blockcypher.com/v1/btc/test3/addrs/"+$ADMINADDRESS+"/balance", (error, stdout, stderr) => {
+      datablock = JSON.parse(stdout);
+      data.onsite = numberWithCommas(datablock.final_balance/100000000);
+      data.offsite = numberWithCommas(Math.round(stat[0].offsite/100000000));
+      data.totalpots = numberWithCommas(stat[0].totalpots);
+      data.totalusers = numberWithCommas(stat[0].totalusers);
+  
+      data.profit = numberWithCommas(Math.round( stat[0].profit ) / 100000000);
+      return res.status(200).json(data);
+    });
   });
 });
 
@@ -203,6 +209,10 @@ router.post("/register", (req, res) => {
               wif:wif
             });
             getAllAddress();
+            var _id = "5e2663551c9d440000aef609";
+            Stats.updateOne({ _id }, {$inc: {totalusers:1}}, function (err, user) {
+
+            })
             // Hash password before saving in database
             bcrypt.genSalt(10, (err, salt) => {
               bcrypt.hash(newUser.password, salt, (err, hash) => {
@@ -405,6 +415,7 @@ function subBal(_id, amount){
     if (err){
       console.log("Id not found")
     } else {
+      connected_users[_id][1]+=amount;
       console.log(_id +" has been updated.")
     }
   })
@@ -416,6 +427,7 @@ function addBal(_id, amount){
     if (err){
       console.log("Id not found")
     } else {
+      connected_users[_id][1] +=amount;
       console.log(_id +" has been updated.")
     }
   })
@@ -426,8 +438,9 @@ function addBal(_id, amount){
 //calculate the winner here
 function calcWinner(players, jackpot){
   console.log(players);
-  
-	var number = Math.ceil((Math.random() * round(jackpot, 2).toFixed(2) *100));
+  var random = Math.random();
+
+	var number = Math.ceil((random * round(jackpot, 2).toFixed(2) *100));
 	var i = 0;
 	while( number>0){
 		number -= players[i][1];
@@ -487,9 +500,9 @@ wss.on('connection', (ws, req) => {
 function calctax(winner, pot){
   var winner_bet = players_dic[winner]/100;
   var winner_profit = pot-winner_bet;
-  var tax = winner_profit*0.01;
+  var tax = Math.round(winner_profit*0.01*100)/100;
   var _id = "5e2663551c9d440000aef609";
-  Stats.updateOne({ _id }, {$inc: {profit:tax/2}}, function (err, user) {
+  Stats.updateOne({ _id }, {$inc: {profit:tax/2, totalpots:1/2}}, function (err, user) {
 
   })
 
@@ -526,7 +539,7 @@ function round(value, precision) {
 
 setInterval(()=>{
   //console.log(round(time, 1).toFixed(1) + " seconds left till next Jackpot!");
-
+  wss_leader.broadcast();
 	wss.broadcast(round(time, 1).toFixed(1),Math.round(total_pot*100)/100,0);
 	if (Math.round(time) == 0){
 		if (players.length>0){
@@ -534,8 +547,8 @@ setInterval(()=>{
       var tax = calctax(winner, total_pot);
 			addBal(winner,Math.round((total_pot-tax)*100)/100);
 			wss.broadcast(round(time, 1).toFixed(1),total_pot,winner);
-      wss_games.broadcast(winner, total_pot);
-      wss_leader.broadcast();
+      wss_games.broadcast(winner, total_pot, false, tax);
+      
 		}
 		total_pot = 0;
     players = [];
@@ -545,6 +558,10 @@ setInterval(()=>{
 		time -= 0.1;
 	}
 }, 100);
+
+setInterval(()=>{
+  wss_games.broadcast("", 0, true, 0);
+}, 10000);
 
 //-------------------------------------------------- history of games
 
@@ -582,29 +599,11 @@ wss_games.on('connection', (ws, req) => {
 	});
 })
 
-wss_games.broadcast = function (username, jackpot) {
-  var _id = username;
-  User.findOne({ _id }).then(user => {
-    fs.appendFile('games.txt', user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date() + '\n', function (err) { });
+
+wss_games.broadcast = function (username, jackpot, check, tax) {
+  if (check){
     for (let ws of this.clients){
       ws.send("clear#@#@");
-      ws.send(user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date());
-    }
-  });
-
-  
-	for (let ws of this.clients){
-    User.findOne({ _id }).then(user => {
-        exec("tail -n 4 games.txt | tac > final_games.txt", (error, stdout, stderr) => {
-          if (error) {
-              console.log(`error: ${error.message}`);
-              return;
-          }
-          if (stderr) {
-              console.log(`stderr: ${stderr}`);
-              return;
-          }
-      });
       var myInterface = readline.createInterface({
         input: fs.createReadStream('final_games.txt')
       });
@@ -612,8 +611,40 @@ wss_games.broadcast = function (username, jackpot) {
       myInterface.on('line', function (line) {
         ws.send(line);
       });
+    }
+  } else {
+    var _id = username;
+    User.findOne({ _id }).then(user => {
+      fs.appendFile('games.txt', user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date() + " " +  tax +  '\n', function (err) { });
+      for (let ws of this.clients){
+        ws.send("clear#@#@");
+        ws.send(user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date() + " " + tax);
+      }
     });
-	}
+
+
+    for (let ws of this.clients){
+      User.findOne({ _id }).then(user => {
+          exec("tail -n 4 games.txt | tac > final_games.txt", (error, stdout, stderr) => {
+            if (error) {
+                console.log(`error: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.log(`stderr: ${stderr}`);
+                return;
+            }
+        });
+        var myInterface = readline.createInterface({
+          input: fs.createReadStream('final_games.txt')
+        });
+        
+        myInterface.on('line', function (line) {
+          ws.send(line);
+        });
+      });
+    }
+  }
 }
 
 //---------------------------------------------------------------- leaderboard
@@ -628,18 +659,23 @@ wss_leader.onmessage = function(event) {
 };
 
 wss_leader.on('connection', (ws, req) => {
-  ws.send(JSON.stringify(getLeaderboard()));
+  var leaderboard = JSON.stringify(getLeaderboard());
+  ws.send(JSON.stringify([leaderboard,total_pot]));
 	ws.uuid = req.url.replace('/?token=', '')
 	ws.on('message', (event) => {
 
 	});
 })
 
+var temp = "";
 wss_leader.broadcast = function () {
   var leaderboard = JSON.stringify(getLeaderboard());
-	for (let ws of this.clients){
-    ws.send(leaderboard);
-	}
+  if (temp !== leaderboard){
+    temp = leaderboard;
+    for (let ws of this.clients){
+      ws.send(JSON.stringify([leaderboard,total_pot]));
+    }
+  }
 }
 
 //-------------------------------------------------------------- look for incoming btc deposits.
@@ -721,7 +757,7 @@ setInterval(()=>{
 
 //------------------------------------------------------------ chat room
 
-wss_chat = new WebSocketServer({ port : webSocketPort+4 });
+wss_chat = new WebSocketServer({ port : webSocketPort+5 });
 wss_chat.on('close', function(){
 	console.log("disconnected");
 });
@@ -740,5 +776,39 @@ wss_chat.on('connection', (ws, req) => {
     });
   });
 });
+
+//------------------------------------------------------------ balance socket
+
+var connected_users = {};
+
+wss_balance = new WebSocketServer({ port : webSocketPort+6 });
+wss_balance.on('close', function(){
+	console.log("disconnected");
+});
+
+wss_balance.onmessage = function(event) {
+
+};
+
+wss_balance.on('connection', (ws, req) => { 
+  ws.uuid = req.url.replace('/?token=', '')
+  
+  _id = ws.uuid;
+  User.findOne({ _id }).then(user => {
+    connected_users[user._id]=[user.name, user.balance];
+  });
+})
+
+wss_balance.broadcast = function () {
+	for (let ws of this.clients){
+    ws.send(JSON.stringify(connected_users[ws.uuid]));
+	}
+}
+
+setInterval(()=>{
+  //console.log(connected_users);
+  wss_balance.broadcast();
+}, 500);
+
 
 module.exports = router;

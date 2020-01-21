@@ -10,8 +10,8 @@ class Landing extends Component {
             <h4>
               <b>THE ORIGINAL JACKPOT</b>
             </h4>
-            <p className="flow-text grey-text text-darken-1">
-              Provably Fair &nbsp;	&nbsp;	
+            <p className="flow-text white-text text-darken-1">
+              Bitcoin Gambling &nbsp;	&nbsp;	
               Social & Real Time
               
             </p>

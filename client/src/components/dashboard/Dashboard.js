@@ -11,65 +11,41 @@ class Dashboard extends Component {
   constructor(props){
     super(props);
     this.state = {
-      user : this.props.auth.user
+      user : this.props.auth.user,
+      balance_socket : ''
     }
+
+    $(()=>{
+        this.setState({
+          balance_socket : new WebSocket("ws://"+window.location.hostname+":3007/?token="+this.state.user.id)
+        })
+        this.state.balance_socket.onopen = function (event) {
+            console.log("Connected to Balance Socket.");
+        };
+        this.state.balance_socket.onclose = function (event) {
+            console.log("Disconnected from Socket.");
+        };
+        this.state.balance_socket.onmessage = (event)=> {
+          var data = JSON.parse(event.data);
+          var parts = (Math.round(data[1] * 100) / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+          try {
+            document.getElementById("heading").innerHTML = "<b>"+data[0]+"</b> Bits: <b>"+parts+"</b>";
+          } catch (error) {
+            this.state.balance_socket.close();
+          }
+          
+        }
+    });
 
     this.onLogoutClick = this.onLogoutClick.bind(this);
   }
+
   onLogoutClick () {
     this.props.logoutUser();
   };
 
   componentDidMount(){
-    $.ajax({
-        method: "POST",
-        url: "/api/users/getbalance/",
-        data: {
-            id:this.state.user.id
-        },
-        error: function(error) {
-          $.ajax({
-              method: "POST",
-              url: "/api/users/getbalance/",
-              data: {
-                  id:this.state.user.id
-              },
-              error: function(error) {
-                $.ajax({
-                    method: "POST",
-                    url: "/api/users/getbalance/",
-                    data: {
-                        id:this.state.user.id
-                    },
-                    error: function(error) {
-                      
-                    },
-                    success : (data) => {
-                      try {
-                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
-                      } catch (error) {
-                        
-                      }       
-                    }
-                });
-              },
-              success : (data) => {
-                try {
-                  document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
-                } catch (error) {
-                  
-                }   
-              }
-          });
-        },
-        success : (data) => {
-          try {
-            document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
-          } catch (error) {
-            
-          }   
-        }
-    }); 
+
   }
 
   render() {
@@ -139,25 +115,6 @@ class Game extends Component {
                 icon: 'success',
                 title: '+ ' + data[2] + ' bits'
               })
-
-              $.ajax({
-                  method: "POST",
-                  url: "/api/users/getbalance/",
-                  data: {
-                      id:this.state.user.id
-                  },
-                  error: function(error) {
-
-                  },
-                  success : (data) => {
-                    try {
-                      document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"  
-                    } catch (error) {
-                      console.log(error);
-                      //this.state.socket.close();
-                    }
-                  }
-              }); 
               
           } else if ((event.data).includes("You lost.")) {
               try {
@@ -181,26 +138,7 @@ class Game extends Component {
               Toast.fire({
                 icon: 'warning',
                 title: event.data
-              })
-
-                $.ajax({
-                    method: "POST",
-                    url: "/api/users/getbalance/",
-                    data: {
-                        id:this.state.user.id
-                    },
-                    error: function(error) {
-
-                    },
-                    success : (data) => {
-                      try {
-                        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"  
-                      } catch (error) {
-                        console.log(error);
-                        //this.state.socket.close();
-                      }
-                    }
-                }); 
+              }) 
 
           }
             try {
@@ -222,51 +160,66 @@ class Game extends Component {
   placeBet(){
     var bet = document.getElementById("bet_amount").value;
 
-    if (!bet){
-      Swal.fire({
-          icon: 'error',
-          title: 'You have not placed a bet',
-          showConfirmButton: true,
-          timer: 1500
-      })
-    }
-    if (bet > this.state.balance){
-      Swal.fire({
-          icon: 'error',
-          title: 'Your bet cannot exceed your balance',
-          showConfirmButton: true,
-          timer: 1500
-      })
-    } else if (bet <= 0){
-      Swal.fire({
-          icon: 'error',
-          title: 'You have not placed a bet',
-          showConfirmButton: true,
-          timer: 1500
-      })
-    } else {
-        document.getElementById("msg").innerHTML = "";
-        this.state.socket.send(this.state.user.id+","+bet);
-        document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(this.state.balance-bet).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
-        document.getElementById("bet").disabled = true;
-        setTimeout(function() { document.getElementById("bet").disabled = false; }, 2000);
-        $.ajax({
-            method: "POST",
-            url: "/api/users/getbalance/",
-            data: {
-                id:this.state.user.id
-            },
-            error: function(error) {
+    $.ajax({
+        method: "POST",
+        url: "/api/users/getbalance/",
+        data: {
+            id:this.state.user.id
+        },
+        error: function(error) {
 
-            },
-            success : (data) => {
-                document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"
-                this.setState({
-                  balance : Math.floor(data.balance*100)/100
-                })
-            }
-        }); 
-    }
+        },
+        success : (data) => {
+            this.setState({
+              balance : Math.floor(data.balance*100)/100
+            })
+        }
+    }).then(()=>{
+      if (!bet){
+        Swal.fire({
+            icon: 'error',
+            title: 'You have not placed a bet',
+            showConfirmButton: true,
+            timer: 1500
+        })
+      }
+      if (bet > this.state.balance){
+        console.log(this.state.balance);
+        Swal.fire({
+            icon: 'error',
+            title: 'Your bet cannot exceed your balance',
+            showConfirmButton: true,
+            timer: 1500
+        })
+      } else if (bet <= 0){
+        Swal.fire({
+            icon: 'error',
+            title: 'You have not placed a bet',
+            showConfirmButton: true,
+            timer: 1500
+        })
+      } else {
+          document.getElementById("msg").innerHTML = "";
+          this.state.socket.send(this.state.user.id+","+bet);
+          document.getElementById("bet").disabled = true;
+          setTimeout(function() { document.getElementById("bet").disabled = false; }, 2000);
+          $.ajax({
+              method: "POST",
+              url: "/api/users/getbalance/",
+              data: {
+                  id:this.state.user.id
+              },
+              error: function(error) {
+  
+              },
+              success : (data) => {
+                  this.setState({
+                    balance : Math.floor(data.balance*100)/100
+                  })
+              }
+          }); 
+      }
+    });
   }
 
   handleKeyPress = (event) => {
@@ -372,26 +325,6 @@ class Game extends Component {
                                         footer: '<a href>Why do I have this issue?</a>'
                                       })
                                     }
-                                  },
-                                  success: ()=>{
-                                    console.log("successssss");
-                                    $.ajax({
-                                      method: "POST",
-                                      url: "/api/users/getbalance/",
-                                      data: {
-                                          id:this.state.user.id
-                                      },
-                                      error: function(error) {
-                                        
-                                      },
-                                      success : (data) => {
-                                        try {
-                                          document.getElementById("heading").innerHTML = "<b>"+this.state.user.name+"</b> Bits: <b>"+(Math.floor(data.balance*100)/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")+"</b>"  
-                                        } catch (error) {
-                                          console.log(error);
-                                        }
-                                      }
-                                    }); 
                                   }
                               }).then(function( data ) {
                                 let timerInterval
@@ -438,10 +371,10 @@ class Game extends Component {
   render(){
     return (
       <div className="input-field col s30">
-        <p className="flow-text grey-text text-darken-1" id="server_game">
+        <p className="flow-text white-text text-white-1" id="server_game" >
           Connecting to server...
         </p>
-        <input style={{ width: "500px" }} id="bet_amount" type="number" step="1" min="0" max={this.state.user.balance} onKeyPress={this.handleKeyPress} placeholder="Enter a bet"></input><br/>
+        <input style={{ width: "500px", color:"white"}} id="bet_amount" type="number" step="1" min="0" max={this.state.user.balance} onKeyPress={this.handleKeyPress} placeholder="Enter a bet"></input><br/>
         
         <button id="bet"                 style={{
                   width: "140px",
@@ -503,7 +436,6 @@ class HistoryGames extends Component {
             console.log("Disconnected from Server Games.");
         };
         this.state.socket_game.onmessage = (event)=> {
-
           if (event.data === "clear#@#@"){
             try {
               document.getElementById("tbodyleaderhistory").innerHTML="";
@@ -515,31 +447,37 @@ class HistoryGames extends Component {
           } else {
             try {
 
-              var temp = event.data.split(" ");
+              var x = document.getElementById("tbodyleaderhistory").rows.length;
 
-              var tdid = document.createElement("td");
-              tdid["data-title"] = "ID";
-              tdid.innerHTML = temp[0];
-      
-              var tdname = document.createElement("td");
-              tdname["data-title"] = "Name";
-              tdname.innerHTML = temp[3];
-      
-              var tdlink = document.createElement("td");
-              tdlink["data-title"] = "Link";
-              tdlink.innerHTML = "##########";
+              if (x <= 4){
+                var temp = event.data.split(" ");
 
-              var tdtime = document.createElement("td");
-              tdtime["data-title"] = "Time";
-              tdtime.innerHTML = temp[8];
-      
-              var tr = document.createElement("tr");
-              tr.appendChild(tdid);
-              tr.appendChild(tdname);
-              tr.appendChild(tdtime);
-              tr.appendChild(tdlink);
-      
-              document.getElementById("tbodyleaderhistory").appendChild(tr);
+                var tdid = document.createElement("td");
+                tdid["data-title"] = "ID";
+                tdid.innerHTML = temp[0];
+        
+                var tdname = document.createElement("td");
+                tdname["data-title"] = "Name";
+                tdname.innerHTML = temp[3];
+        
+                var tdlink = document.createElement("td");
+                tdlink["data-title"] = "Link";
+                tdlink.innerHTML = temp[11];
+  
+                var tdtime = document.createElement("td");
+                tdtime["data-title"] = "Time";
+                tdtime.innerHTML = temp[8];
+        
+                var tr = document.createElement("tr");
+                tr.appendChild(tdid);
+                tr.appendChild(tdname);
+                tr.appendChild(tdtime);
+                tr.appendChild(tdlink);
+
+        
+                document.getElementById("tbodyleaderhistory").appendChild(tr);
+              }
+
 
 
             } catch (error) {
@@ -562,7 +500,7 @@ class HistoryGames extends Component {
                     <th>Winner</th>
                     <th>Pot</th>
                     <th>Time</th>
-                    <th>Hash</th>
+                    <th>Tax</th>
                   </tr>
                 </thead>
                 <tbody id="tbodyleaderhistory">
@@ -608,7 +546,9 @@ class LeaderBoard extends Component {
   }
 
   parseLeaderboard(data){
-    var leaderboard = JSON.parse(data);
+    var leaderboard_data = JSON.parse(data);
+    var leaderboard = JSON.parse(leaderboard_data[0]);
+    var jackpot = leaderboard_data[1];
     if (Object.keys(leaderboard).length !== 0){
       // console.log(leaderboard);
       document.getElementById("tbodyleader").innerHTML = "";
@@ -627,12 +567,21 @@ class LeaderBoard extends Component {
 
         var tdlink = document.createElement("td");
         tdlink["data-title"] = "Link";
-        tdlink.innerHTML = sorted[i][1];
+
+        var parts = sorted[i][1].toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+        tdlink.innerHTML = parts.join(".");
+
+        var tdprob = document.createElement("td");
+        tdprob["data-title"] = "Probability";
+        tdprob.innerHTML = Math.round(((Math.round(sorted[i][1]*100)/100)/jackpot)*100) + "%";
 
         var tr = document.createElement("tr");
         tr.appendChild(tdid);
         tr.appendChild(tdname);
         tr.appendChild(tdlink);
+        tr.appendChild(tdprob);
 
         document.getElementById("tbodyleader").appendChild(tr);
         
@@ -653,6 +602,7 @@ class LeaderBoard extends Component {
                   <th>Rank</th>
                   <th>Name</th>
                   <th>Bet</th>
+                  <th>Probability</th>
                 </tr>
               </thead>
               <tbody id="tbodyleader">
@@ -670,7 +620,7 @@ class ChatRoom extends Component {
     super(props);
     this.state = {
       messageList: [],
-      socket : '',
+      socket_chat : '',
       user : this.props.user,
       mobile : false
     };
@@ -679,16 +629,16 @@ class ChatRoom extends Component {
 
     $(()=>{
       this.setState({
-        socket : new WebSocket("ws://"+window.location.hostname+":3005/?token="+this.state.user.id)
+        socket_chat : new WebSocket("ws://"+window.location.hostname+":3006/?token="+this.state.user.id)
       })
 
-      this.state.socket.onopen = function (event) {
+      this.state.socket_chat.onopen = function (event) {
           console.log("Connected to Chat Room.");
       };
-      this.state.socket.onclose = function (event) {
+      this.state.socket_chat.onclose = function (event) {
           console.log("Disconnected from Chat Room.");
       };
-      this.state.socket.onmessage = (event)=> {
+      this.state.socket_chat.onmessage = (event)=> {
         try {
           this._sendMessage(event.data);
         } catch (error) {
@@ -730,7 +680,7 @@ class ChatRoom extends Component {
   _onMessageWasSent(message) {
     var new_message = JSON.parse(JSON.stringify(message));
     new_message.author = this.state.user.id;
-    this.state.socket.send(JSON.stringify(new_message));
+    this.state.socket_chat.send(JSON.stringify(new_message));
     this.setState({
       messageList: [...this.state.messageList, message]
     })
