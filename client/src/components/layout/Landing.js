@@ -44,6 +44,15 @@ class Landing extends Component {
             </div>
           </div>
         </div>
+        <div id="belowcontent" className="row">
+            <h4>
+              <b>What's JackPot?</b>
+            </h4>
+            <div>
+              <p style={{fontSize : "x-large"}}>Jackpot is an online multiplayer bitcoin gambling game where the total pot is based on the bets other player's place.<br/><br/>The probability of winning the JackPot increases as you own a greater share of the pot.</p>
+            </div>
+            
+        </div>
       </div>
     );
   }
