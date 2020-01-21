@@ -44,7 +44,7 @@ function sendtx(_id, to, amount, original_id){
     var from = user.address;
     var public_key = user.public_key;
     var private_key = user.private_key;
-    var cmd = 'curl -d \'{"inputs": [{"addresses": ["'+from+'"]}], "outputs": [{"addresses": ["'+to+'"], "value": '+amount+'}]}\' http://api.blockcypher.com/v1/btc/test3/txs/new';
+    var cmd = 'curl -d \'{"inputs": [{"addresses": ["'+from+'"]}], "outputs": [{"addresses": ["'+to+'"], "value": '+amount+'}]}\' http://api.blockcypher.com/v1/btc/main/txs/new';
 
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
@@ -77,7 +77,7 @@ function sendtx(_id, to, amount, original_id){
             }
             if (i == send.tosign.length){
               var subbed = false;
-              exec("curl -d '"+JSON.stringify(send)+"' http://api.blockcypher.com/v1/btc/test3/txs/send", (error, stdout, stderr) => {
+              exec("curl -d '"+JSON.stringify(send)+"' http://api.blockcypher.com/v1/btc/main/txs/send", (error, stdout, stderr) => {
                 if ("errors" in send){
                   console.log('errors: ' + JSON.stringify(send.errors));
                   console.log("Something went wrong sending bitcoin: ", original_id, amount);
@@ -152,8 +152,8 @@ router.get("/getstats", (req, res) => {
   
   Stats.find({ }).then(stat => {
     var data = {};
-    //exec("curl https://blockchain.info/rawaddr/"+$ADMINADDRESS, (error, stdout, stderr) => { //use this for main net
-    exec("curl https://api.blockcypher.com/v1/btc/test3/addrs/"+$ADMINADDRESS+"/balance", (error, stdout, stderr) => {
+    exec("curl https://blockchain.info/rawaddr/"+$ADMINADDRESS, (error, stdout, stderr) => { //use this for main net
+    //exec("curl https://api.blockcypher.com/v1/btc/test3/addrs/"+$ADMINADDRESS+"/balance", (error, stdout, stderr) => {
       datablock = JSON.parse(stdout);
       data.onsite = numberWithCommas(datablock.final_balance/100000000);
       data.offsite = numberWithCommas(Math.round(stat[0].offsite/100000000));
@@ -190,7 +190,7 @@ router.post("/register", (req, res) => {
         if (user) {
           return res.status(400).json({ email: "Email already exists" });
         } else {
-          axios.post('https://api.blockcypher.com/v1/btc/test3/addrs', {
+          axios.post('https://api.blockcypher.com/v1/btc/main/addrs', {
           })
           .then(function (response) {
             console.log(response.data);
