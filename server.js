@@ -38,7 +38,7 @@ require("./config/passport")(passport);
 // Routes
 app.use("/api/users", users);
 
-const PORT = 7000;
-console.log("Process ENV PORT:  " , process.env.PORT);
+const PORT = process.env.PORT || 7000;
 
-app.listen(PORT, () => console.log(`Server up and running on port ${PORT} !`));
+
+app.listen(PORT, "0.0.0.0", () => console.log(`Server up and running on port ${PORT} !`));
