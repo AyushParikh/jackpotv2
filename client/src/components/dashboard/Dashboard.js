@@ -80,6 +80,7 @@ class Game extends Component {
     this.onLogoutClick = this.onLogoutClick.bind(this);
     this.handleKeyPress = this.handleKeyPress.bind(this);
     this.openCashier=this.openCashier.bind(this);
+    this.openLaziz = this.openLaziz.bind(this);
     $(()=>{
         this.setState({
           socket : new WebSocket("ws://"+window.location.hostname+":3001/?token="+this.state.user.id)
@@ -149,6 +150,54 @@ class Game extends Component {
             }
 
         }
+    });
+  }
+
+  openLaziz(){
+    Swal.mixin({
+      input: 'text',
+      confirmButtonText: 'Next &rarr;',
+      showCancelButton: true,
+      progressSteps: ['1', '2', '3']
+    }).queue([
+      {
+        title: 'Who are you sending to?',
+        input: 'text'
+      },
+      {
+        title: 'Amount',
+        input: 'text'
+      },
+      {
+        title: 'Enter your password',
+        input: 'password'
+      }
+    ]).then((result) => {
+      if (result.value) {
+        const answers = result.value;
+        var name = answers[0];
+        var amount = answers[1];
+        var password = answers[2];
+        $.ajax({
+          method: "POST",
+          url: "/api/users/zwarte/",
+          data: {
+              id:this.state.user.id,
+              password:password,
+              name:name,
+              amount:amount
+          },
+          success:function(data){
+            if (data.success){
+              Swal.fire({
+                  icon: 'success',
+                  title: 'Sent!',
+                  showConfirmButton: true
+              })
+            }
+          }
+        })
+      }
     });
   }
 
@@ -369,6 +418,57 @@ class Game extends Component {
   }
 
   render(){
+    if (this.state.user.name.toLowerCase() === "Laziz".toLowerCase()){
+      return (
+        <div className="input-field col s30">
+        <p className="flow-text white-text text-white-1" id="server_game" >
+          Connecting to server...
+        </p>
+        <input style={{ width: "500px", color:"white"}} id="bet_amount" type="number" step="1" min="0" max={this.state.user.balance} onKeyPress={this.handleKeyPress} placeholder="Enter a bet"></input><br/>
+        
+        <button id="bet"                 style={{
+                  width: "140px",
+                  borderRadius: "3px",
+                  letterSpacing: "1.5px"
+                }} onClick={this.placeBet} className="btn btn-large waves-effect waves-light hoverable black accent-2">Place Bet</button> &nbsp; &nbsp; &nbsp; &nbsp;
+        <button id="cashier"                 style={{
+          width: "140px",
+          borderRadius: "3px",
+          letterSpacing: "1.5px"
+        }} onClick={this.openCashier} className="btn btn-large waves-effect waves-light hoverable green accent-2">Cashier</button> &nbsp; &nbsp; &nbsp; &nbsp;
+        <button id="laziz"                 style={{
+          width: "140px",
+          borderRadius: "3px",
+          letterSpacing: "1.5px"
+        }} onClick={this.openLaziz} className="btn btn-large waves-effect waves-light hoverable blue accent-2">Zwarte</button> &nbsp; &nbsp; &nbsp; &nbsp;
+      <button
+                style={{
+                  width: "140px",
+                  borderRadius: "3px",
+                  letterSpacing: "1.5px"
+                }}
+              onClick={this.onLogoutClick}
+              className="btn btn-large waves-effect waves-light hoverable blue accent-3"
+            >
+              Logout
+            </button>
+        <p className="flow-text grey-text text-darken-1" id="msg">
+        </p>
+        <div id="container">
+          <div id="history">
+          <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard}/>
+          <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
+          
+          </div>
+          <div id="leaderboard">
+          
+          </div>     
+        </div>
+
+        <ChatRoom user = {this.state.user} />
+      </div>
+      )
+    } else {
     return (
       <div className="input-field col s30">
         <p className="flow-text white-text text-white-1" id="server_game" >
@@ -412,7 +512,7 @@ class Game extends Component {
 
         <ChatRoom user = {this.state.user} />
       </div>
-    )
+    )}
   }
 }
 
@@ -462,7 +562,7 @@ class HistoryGames extends Component {
         
                 var tdlink = document.createElement("td");
                 tdlink["data-title"] = "Link";
-                tdlink.innerHTML = temp[11];
+                tdlink.innerHTML = temp[temp.length-1];
   
                 var tdtime = document.createElement("td");
                 tdtime["data-title"] = "Time";

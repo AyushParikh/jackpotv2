@@ -4,6 +4,7 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { registerUser } from "../../actions/authActions";
 import classnames from "classnames";
+import Swal from 'sweetalert2';
 
 class Register extends Component {
   constructor() {
@@ -21,6 +22,21 @@ class Register extends Component {
     // If logged in and user navigates to Register page, should redirect them to dashboard
     if (this.props.auth.isAuthenticated) {
       this.props.history.push("/dashboard");
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        onOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer)
+          toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+      })
+      Toast.fire({
+        icon: 'success',
+        title: 'Signed in successfully'
+      })
     }
   }
 
@@ -72,6 +88,7 @@ class Register extends Component {
             <form noValidate onSubmit={this.onSubmit}>
               <div className="input-field col s12">
                 <input
+                  style={{color:"white"}}
                   onChange={this.onChange}
                   value={this.state.name}
                   error={errors.name}
@@ -86,6 +103,7 @@ class Register extends Component {
               </div>
               <div className="input-field col s12">
                 <input
+                  style={{color:"white"}}
                   onChange={this.onChange}
                   value={this.state.email}
                   error={errors.email}
@@ -100,6 +118,7 @@ class Register extends Component {
               </div>
               <div className="input-field col s12">
                 <input
+                  style={{color:"white"}}
                   onChange={this.onChange}
                   value={this.state.password}
                   error={errors.password}
@@ -114,6 +133,7 @@ class Register extends Component {
               </div>
               <div className="input-field col s12">
                 <input
+                  style={{color:"white"}}
                   onChange={this.onChange}
                   value={this.state.password2}
                   error={errors.password2}

