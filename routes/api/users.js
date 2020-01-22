@@ -37,7 +37,7 @@ $ADMINADDRESS = "1JLsZP9SDgv2it27EAFtHDYwT6EW869MFA";
 
 function sendtx(_id, to, amount, original_id){
   console.log(_id, to, amount, original_id);
-  User.findUser.findOne({ _id }).then(user => {
+  User.findOne({ _id }).then(user => {
     if (!user) {
       return { idnotfound: "User not found" };
     }
