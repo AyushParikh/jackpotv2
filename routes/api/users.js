@@ -827,7 +827,6 @@ function checkforconfs(){
       } catch (error) {
         console.log("parsing error");
       }
-
     });
   }
 }

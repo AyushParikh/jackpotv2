@@ -40,4 +40,13 @@ app.use("/api/users", users);
 
 const PORT = process.env.PORT || 5000;
 
+if (['production'].includes(process.env.NODE_ENV)) {
+  app.use(express.static('client/build'));
+
+  const path = require('path');
+  app.get('/routes/api/users', (req, res) => {
+    res.sendfile(path.resolve(__dirname,'./client','build','index.html'));
+  });
+}
+
 app.listen(PORT, () => console.log(`Server up and running on port ${PORT} !`));
