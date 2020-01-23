@@ -771,6 +771,7 @@ function getAllAddress(){
 var blockchain_socket = new WebSocket("wss://ws.blockchain.info/inv");
 blockchain_socket.onopen = function (event) {
   console.log("Connected to Blockchain Socket.");
+  blockchain_socket.send('{"op":"blocks_sub"}');
   getAllAddress();
 
 };
@@ -780,32 +781,38 @@ blockchain_socket.onclose = function (event) {
 blockchain_socket.onmessage = (event)=> {
   try {
     var data = JSON.parse(event.data);
-    console.log("Got money!");
-    var hash = data.x.hash;
-    var recv_addrs = [];
-    for (var i = 0; i < data.x.out.length; i++){
-      if (all_addresses.includes(data.x.out[i].addr)){
-        recv_addrs.push([data.x.out[i].addr, data.x.out[i].value]);
-      }
-    }
-    console.log(recv_addrs);
-    for (var i = 0; i < recv_addrs.length; i++){
-      if (!used_hashes.includes(hash)){
-        used_hashes.push(hash);
-        var _id = address_id_pair[recv_addrs[i][0]];
-        if (_id != $ADMINID){
-          unconfed[hash] = [_id,recv_addrs[i][1]];
+    if (data["op"]==="block"){
+      console.log("New Block");
+      checkforconfs();
+    } else {
+        console.log("Got money!");
+        var hash = data.x.hash;
+        var recv_addrs = [];
+        for (var i = 0; i < data.x.out.length; i++){
+          if (all_addresses.includes(data.x.out[i].addr)){
+            recv_addrs.push([data.x.out[i].addr, data.x.out[i].value]);
+          }
+        }
+        console.log(recv_addrs);
+        for (var i = 0; i < recv_addrs.length; i++){
+          if (!used_hashes.includes(hash)){
+            used_hashes.push(hash);
+            var _id = address_id_pair[recv_addrs[i][0]];
+            if (_id != $ADMINID){
+              unconfed[hash] = [_id,recv_addrs[i][1]];
+            }
+          }
         }
       }
     }
-  } catch (error) {
+catch (error) {
     console.log(error);
     //this.state.socket.close();
   }
 }
 
 var unconfed = {};
-setInterval(()=>{
+function checkforconfs(){
   for (let key in unconfed){
     exec("curl https://blockchain.info/rawtx/"+key, (error, stdout, stderr) => {
       try {
@@ -823,7 +830,8 @@ setInterval(()=>{
 
     });
   }
-}, 5000);
+}
+
 
 //------------------------------------------------------------ chat room
 
