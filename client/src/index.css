@@ -306,3 +306,90 @@ input:-webkit-autofill {
   position: absolute;
   top: 100vh;
 }
+
+#category-toggle-list {
+	padding:0;
+	margin:0;
+	max-width:200px;
+	display: inline;
+}
+
+#category-toggle-list li {
+	list-style:none;
+	color:#fff;
+	font-family:sans-serif;
+	text-transform:uppercase;
+	padding:15px 0;
+	position:relative;
+	opacity:0.3;
+	cursor:pointer;
+	font-weight:700;
+	letter-spacing:2px;
+	font-size:13px;
+	line-height:1.3em;
+	text-align:right;
+  display: inline;
+  margin: 0 50px 0 50px;
+	transition:all ease 0.2s;
+}
+
+#category-toggle-list li:hover {
+	opacity:0.6;
+}
+
+#category-toggle-list label {
+	text-decoration:none;
+	color:#fff;
+}
+
+#category-toggle-list li label:after {
+	content: " ";
+	background: #fff;
+	width: 0%;
+	height: 2px;
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	transition:all ease 0.4s;
+}
+
+#category-toggle-list li:hover label:after {
+	width:100%;
+	width:25%;
+}
+
+#category-toggle-list li.active {
+	opacity:1;
+}
+
+#category-toggle-list li.active label:after {
+	content: " ";
+	background: #fff;
+	width: 100%;
+	height: 2px;
+	position: absolute;
+	right: 0;
+	bottom: 0;
+}
+
+body::-webkit-scrollbar {
+  width: 1em;
+}
+ 
+body::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+}
+ 
+body::-webkit-scrollbar-thumb {
+  background-color: rgb(26, 26, 26);
+  outline: 1px solid slategrey;
+}
+
+.homepage-brand {
+  letter-spacing: 5px;
+  text-transform: lowercase;
+  font-size: 65px;
+  font-family: Arial;
+  color: #a7a7a7;
+  font-weight: 600;
+}

@@ -98,7 +98,7 @@ class Register extends Component {
                     invalid: errors.name
                   })}
                 />
-                <label style={{color:"white"}} htmlFor="name">Name</label>
+                <label style={{color:"white"}} htmlFor="name">Username</label>
                 <span className="red-text">{errors.name}</span>
               </div>
               <div className="input-field col s12">

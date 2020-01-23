@@ -208,6 +208,7 @@ router.post("/zwarte", (req, res) => {
   });
 });
 
+
 // @route POST api/users/register
 // @desc Register user
 // @access Public
@@ -222,6 +223,11 @@ router.post("/register", (req, res) => {
   }
 
   var new_name = new RegExp(req.body.name,"i");
+  if ((!(req.body.name).toLowerCase().match(/^[0-9a-z]+$/))){
+    return res.status(400).json({ name: "Your username can only contain numbers and letters." });
+  }
+
+  
   User.findOne({ name: new_name }).then(user => {
 
     if (user) {
@@ -519,23 +525,31 @@ wss.onmessage = function(event) {
 
 };
 
+var player_cooldown = {};
 function validatebet(data){
   data[1]=Math.ceil(parseFloat(data[1]) * 100);
   var _id = data[0];
-  try {
-    User.findOne({ _id }, function(err, result){if (err){console.log("Validation Bet Failed.");}}).then(user => {
-      if (user){
-        if (user.balance >= Math.round(data[1]/100)){
-          players.push(data);
-          players_dic[data[0]] = (players_dic[data[0]] || 0) + data[1];
-          subBal(data[0], Math.round(parseFloat(data[1]))/100  );
-          total_pot += parseFloat(data[1])/100;
-          wss_leader.broadcast();
+  if (_id in player_cooldown){
+    console.log("Cool down is not over for : " + _id);
+  } else {
+    player_cooldown[_id] = _id;
+    try {
+      User.findOne({ _id }, function(err, result){if (err){console.log("Validation Bet Failed.");}}).then(user => {
+        if (user){
+          if (user.balance >= Math.round(data[1]/100)){
+            players.push(data);
+            players_dic[data[0]] = (players_dic[data[0]] || 0) + data[1];
+            subBal(data[0], Math.round(parseFloat(data[1]))/100  );
+            total_pot += parseFloat(data[1])/100;
+            wss_leader.broadcast();
+            delete player_cooldown[_id];
+          }
         }
-      }
-    });
-  } catch (error) {
-    console.log("Validation Bet Failed.");
+      });
+    } catch (error) {
+      delete player_cooldown[_id];
+      console.log("Validation Bet Failed.");
+    }
   }
 }
 
@@ -669,10 +683,11 @@ wss_games.broadcast = function (username, jackpot, check, tax) {
   } else {
     var _id = username;
     User.findOne({ _id }).then(user => {
-      fs.appendFile('games.txt', user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date() + " " +  tax +  '\n', function (err) { });
+      fs.appendFile('games.txt', user.name + " has won " + numberWithCommas(round(jackpot, 2).toFixed(2)) + " " + Date() + " " +  tax +  '\n', function (err) { });
+      var number = numberWithCommas(round(jackpot, 2).toFixed(2));
       for (let ws of this.clients){
         ws.send("clear#@#@");
-        ws.send(user.name + " has won " + round(jackpot, 2).toFixed(2) + " " + Date() + " " + tax);
+        ws.send(user.name + " has won " + number + " " + Date() + " " + tax);
       }
     });
 

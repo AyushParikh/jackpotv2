@@ -81,6 +81,7 @@ class Game extends Component {
     this.handleKeyPress = this.handleKeyPress.bind(this);
     this.openCashier=this.openCashier.bind(this);
     this.openLaziz = this.openLaziz.bind(this);
+
     $(()=>{
         this.setState({
           socket : new WebSocket("ws://"+window.location.hostname+":3001/?token="+this.state.user.id)
@@ -458,11 +459,7 @@ class Game extends Component {
           <div id="history">
           <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard}/>
           <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
-          
-          </div>
-          <div id="leaderboard">
-          
-          </div>     
+          </div>   
         </div>
 
         <ChatRoom user = {this.state.user} />
@@ -500,19 +497,61 @@ class Game extends Component {
         <p className="flow-text grey-text text-darken-1" id="msg">
         </p>
         <div id="container">
-          <div id="history">
+          <Toggle user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard} socket_game={this.state.socket_game}/>
+          {/* <div id="history">
           <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard}/>
           <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
-          
-          </div>
-          <div id="leaderboard">
-          
-          </div>     
+          </div> */}
         </div>
 
         <ChatRoom user = {this.state.user} />
       </div>
     )}
+  }
+}
+
+class Toggle extends Component {
+  constructor(props){
+    super(props);
+    this.state = {
+      players : true,
+      leaderboard : false,
+      user : this.props.user,
+      socket_leaderboard : this.props.socket_leaderboard,
+      socket_game : this.props.socket_game
+    }
+    this.toggle = this.toggle.bind(this);
+  }
+
+  toggle(e){
+    this.setState({
+      players: !this.state.players,
+      leaderboard: !this.state.leaderboard,
+    });
+  }
+
+  render(){
+    if (this.state.players){
+      return (
+        <div>
+          <ul id="category-toggle-list">
+            <li className="project-category web active"><label>Players</label></li>
+            <li className="project-category cro" onClick={this.toggle}><label>History</label></li>
+          </ul>
+          <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard} />
+        </div>
+      )
+    } else {
+      return (
+        <div>
+          <ul id="category-toggle-list">
+            <li className="project-category web" onClick={this.toggle}><label>Players</label></li>
+            <li className="project-category cro active"><label>History</label></li>
+          </ul>
+          <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
+        </div>
+      )
+    }
   }
 }
 
@@ -574,12 +613,8 @@ class HistoryGames extends Component {
                 tr.appendChild(tdtime);
                 tr.appendChild(tdlink);
 
-        
                 document.getElementById("tbodyleaderhistory").appendChild(tr);
               }
-
-
-
             } catch (error) {
               //console.log(error);
               //this.state.socket.close();
@@ -638,7 +673,7 @@ class LeaderBoard extends Component {
           try {
             this.parseLeaderboard(event.data); //send leaderboard data to be parsed
           } catch (error) {
-            console.log(error);
+            //console.log(error);
             //this.state.socket.close();
           }
         }

@@ -89,7 +89,7 @@ class Navbar extends Component {
               }}
               className="col s5 brand-logo center white-text"
             >
-              JackPot
+              WasuPot
             </Link>
             <div className="link-effect-13" id="link-effect-13">
               <a style={{cursor: "pointer", fontFamily: "monospace"}} className="col right" onClick={this.support}>Support</a>
