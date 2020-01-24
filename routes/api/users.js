@@ -839,17 +839,32 @@ wss_chat.on('close', function(){
 	console.log("disconnected");
 });
 
+var chatlog = [];
+
 wss_chat.on('connection', (ws, req) => {
   ws.uuid = req.url.replace('/?token=', '')
+
+  if (chatlog.length > 100){
+    for (var i = chatlog.length-100; i < chatlog.length; i++){
+      ws.send(JSON.stringify(chatlog[i]));
+    }
+  } else {
+    for (var i = 0; i < chatlog.length; i++){
+      ws.send(JSON.stringify(chatlog[i]));
+    }
+  }
+
+
   ws.on('message', function incoming(data) {
+    var data2 = JSON.parse(data);
+    var sender = username_id_pair[data2.id].name;
+    var sendthis = {}
+    sendthis.name = sender;
+    sendthis.message = data2.message;
+    chatlog.push(sendthis);
+
     wss_chat.clients.forEach(function each(client) {
-      var data2 = JSON.parse(data);
-      var sender_name = username_id_pair[JSON.parse(data).author].name;
-      var text = sender_name + ": " + data2.data.text;
-      if (JSON.parse(data).author!==client.uuid){
-        client.send(text);
-      }
-      
+      client.send(JSON.stringify(sendthis));      
     });
   });
 });

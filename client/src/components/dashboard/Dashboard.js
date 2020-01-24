@@ -5,7 +5,6 @@ import { logoutUser } from "../../actions/authActions";
 import $ from 'jquery';
 // ES6 Modules or TypeScript
 import Swal from 'sweetalert2';
-import {Launcher} from 'react-chat-window';
 
 class Dashboard extends Component {
   constructor(props){
@@ -456,13 +455,8 @@ class Game extends Component {
         <p className="flow-text grey-text text-darken-1" id="msg">
         </p>
         <div id="container">
-          <div id="history">
-          <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard}/>
-          <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
-          </div>   
+          <Toggle user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard} socket_game={this.state.socket_game}/>
         </div>
-
-        <ChatRoom user = {this.state.user} />
       </div>
       )
     } else {
@@ -498,60 +492,9 @@ class Game extends Component {
         </p>
         <div id="container">
           <Toggle user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard} socket_game={this.state.socket_game}/>
-          {/* <div id="history">
-          <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard}/>
-          <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
-          </div> */}
         </div>
-
-        <ChatRoom user = {this.state.user} />
       </div>
     )}
-  }
-}
-
-class Toggle extends Component {
-  constructor(props){
-    super(props);
-    this.state = {
-      players : true,
-      leaderboard : false,
-      user : this.props.user,
-      socket_leaderboard : this.props.socket_leaderboard,
-      socket_game : this.props.socket_game
-    }
-    this.toggle = this.toggle.bind(this);
-  }
-
-  toggle(e){
-    this.setState({
-      players: !this.state.players,
-      leaderboard: !this.state.leaderboard,
-    });
-  }
-
-  render(){
-    if (this.state.players){
-      return (
-        <div>
-          <ul id="category-toggle-list">
-            <li className="project-category web active"><label>Players</label></li>
-            <li className="project-category cro" onClick={this.toggle}><label>History</label></li>
-          </ul>
-          <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard} />
-        </div>
-      )
-    } else {
-      return (
-        <div>
-          <ul id="category-toggle-list">
-            <li className="project-category web" onClick={this.toggle}><label>Players</label></li>
-            <li className="project-category cro active"><label>History</label></li>
-          </ul>
-          <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
-        </div>
-      )
-    }
   }
 }
 
@@ -750,115 +693,211 @@ class LeaderBoard extends Component {
   }
 }
 
-class ChatRoom extends Component {
+class Toggle extends Component {
   constructor(props){
     super(props);
     this.state = {
-      messageList: [],
-      socket_chat : '',
+      players : true,
+      leaderboard : false,
+      chat : false,
       user : this.props.user,
-      mobile : false
-    };
+      socket_leaderboard : this.props.socket_leaderboard,
+      socket_game : this.props.socket_game,
+      socket_chat : ''
+    }
+    this.toggleplayers = this.toggleplayers.bind(this);
+    this.toggleleaderboard = this.toggleleaderboard.bind(this);
+    this.togglechat = this.togglechat.bind(this);
 
-    this._onMessageWasSent = this._onMessageWasSent.bind(this);
+    this.send = this.send.bind(this);
+    this.receive = this.receive.bind(this);
+    this.enableChat = this.enableChat.bind(this);
+  }
 
+  enableChat(){
     $(()=>{
-      this.setState({
-        socket_chat : new WebSocket("ws://"+window.location.hostname+":3006/?token="+this.state.user.id)
-      })
+        this.setState({
+          socket_chat : new WebSocket("ws://"+window.location.hostname+":3006/?token="+this.state.user.id)
+        })
 
-      this.state.socket_chat.onopen = function (event) {
-          console.log("Connected to Chat Room.");
-      };
-      this.state.socket_chat.onclose = function (event) {
-          console.log("Disconnected from Chat Room.");
-      };
-      this.state.socket_chat.onmessage = (event)=> {
-        try {
-          this._sendMessage(event.data);
-        } catch (error) {
-          console.log(error);
-          //this.state.socket.close();
+        this.state.socket_chat.onopen = function (event) {
+            console.log("Connected to Chat Room.");
+        };
+        this.state.socket_chat.onclose = function (event) {
+            console.log("Disconnected from Chat Room.");
+        };
+        this.state.socket_chat.onmessage = (event)=> {
+          try {
+            this.receive(JSON.parse(event.data));
+          } catch (error) {
+            console.log(error);
+            //this.state.socket.close();
+          }
         }
-      }
-  });
+    });
   }
 
-  componentDidMount(){
-    var isMobile = {
-      Android: function() {
-          return navigator.userAgent.match(/Android/i);
-      },
-      BlackBerry: function() {
-          return navigator.userAgent.match(/BlackBerry/i);
-      },
-      iOS: function() {
-          return navigator.userAgent.match(/iPhone|iPad|iPod/i);
-      },
-      Opera: function() {
-          return navigator.userAgent.match(/Opera Mini/i);
-      },
-      Windows: function() {
-          return navigator.userAgent.match(/IEMobile/i) || navigator.userAgent.match(/WPDesktop/i);
-      },
-      any: function() {
-          return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
-      }
-    };
-    if( isMobile.any() ){ 
-      this.setState({
-        mobile:true
-      })
-    };
-  }
-
-  _onMessageWasSent(message) {
-    var new_message = JSON.parse(JSON.stringify(message));
-    new_message.author = this.state.user.id;
-    this.state.socket_chat.send(JSON.stringify(new_message));
+  toggleplayers(e){
+    try {
+      this.state.socket_chat.close();
+    } catch (error) {
+      
+    }
+    
     this.setState({
-      messageList: [...this.state.messageList, message]
-    })
+      players: true,
+      leaderboard: false,
+      chat : false
+    });
+  }
+
+  toggleleaderboard(e){
+    try {
+      this.state.socket_chat.close();
+    } catch (error) {
+      
+    }
+    this.setState({
+      players: false,
+      leaderboard: true,
+      chat : false
+    });
+  }
+
+  togglechat(e){
+    this.enableChat();
+    this.setState({
+      players: false,
+      leaderboard: false,
+      chat : true
+    });
+  }
+
+  send() {
+    var message_element = document.getElementById("message-to-send");
+    var message = message_element.value;
+    message_element.value = "";
+    var new_message = {"id" : this.state.user.id, "message" : message}
+    this.state.socket_chat.send(JSON.stringify(new_message));
   }
  
-  _sendMessage(text) {
-    if (text.length > 0) {
-      this.setState({
-        messageList: [...this.state.messageList, {
-          author: 'them',
-          type: 'text',
-          data: { text }
-        }]
-      })
+  receive(data){
+    var from = data.name;
+    var message = data.message;
+    var li = document.createElement("li");
+    var div = document.createElement("div");
+    var spanname = document.createElement("span");
+    var divmessage = document.createElement("div");
+
+    if (from !== this.state.user.name){
+      li.id = "clearfix";
+      
+      div.id="message-data-from";
+
+      spanname.id = "message-data-name-from";
+      spanname.innerHTML = from;
+
+      divmessage.id="message-from";
+      divmessage.innerHTML = message;
+
+      div.appendChild(spanname);
+
+      li.appendChild(div);
+      li.appendChild(divmessage);
+
+      document.getElementById("addchat").appendChild(li);
+    } else {
+
+      li.id = "clearfix";
+      
+
+      div.id="message-data";
+
+      spanname.id = "message-data-name";
+      spanname.innerHTML = this.state.user.name;
+  
+      divmessage.id="message";
+      divmessage.innerHTML = message;
+  
+      div.appendChild(spanname);
+  
+      li.appendChild(div);
+      li.appendChild(divmessage);
+  
+      document.getElementById("addchat").appendChild(li);
+    }
+    this.updateScroll();
+  }
+
+  spacecheck(event){
+    if (event.which === 13){
+      document.getElementById("send").click();
+      event.preventDefault();
     }
   }
 
+  updateScroll(){
+    var element = document.getElementById("chat-history");
+    element.scrollTop = element.scrollHeight;
+  }
+
   render(){
-    if (this.state.mobile){
+    if (this.state.players){
       return (
         <div>
-
+          <ul id="category-toggle-list">
+            <li className="project-category web active"><label>Players</label></li>
+            <li className="project-category cro" onClick={this.toggleleaderboard}><label>History</label></li>
+            <li className="project-category cro" onClick={this.togglechat}><label>Chat</label></li>
+          </ul>
+          <LeaderBoard user = {this.state.user} socket_leaderboard={this.state.socket_leaderboard} />
+        </div>
+      )
+    } else if (this.state.leaderboard) {
+      return (
+        <div>
+          <ul id="category-toggle-list">
+            <li className="project-category web" onClick={this.toggleplayers}><label>Players</label></li>
+            <li className="project-category cro active"><label>History</label></li>
+            <li className="project-category cro" onClick={this.togglechat}><label>Chat</label></li>
+          </ul>
+          <HistoryGames user = {this.state.user} socket_game={this.state.socket_game} />
         </div>
       )
     } else {
       return (
         <div>
-          <Launcher
-            agentProfile={{
-              teamName: 'English Chat'
-            }}
-            onMessageWasSent={this._onMessageWasSent.bind(this)}
-            messageList={this.state.messageList}
-            showEmoji={false}
-            mute={true}
-          />
-        </div>
-      )
-    }
+        <ul id="category-toggle-list">
+          <li className="project-category web" onClick={this.toggleplayers}><label>Players</label></li>
+          <li className="project-category cro" onClick={this.toggleleaderboard}><label>History</label></li>
+          <li className="project-category cro active"><label>Chat</label></li>
+        </ul>
+        <div id="demo">
+          <div className="chat" id="chat">
+            <div className="chat-header clearfix">
+                <i className="fa fa-star"></i>
+            </div>
+            <div className="chat-history" id="chat-history">
+                <ul id="addchat">
+                  <li id="clearfix">
 
+                  </li>
+                </ul>
+            </div>
+            <div className="chat-message clearfix">
+                <textarea style={{color:"white"}}name="message-to-send" id="message-to-send" onKeyPress={this.spacecheck} placeholder ="Type your message" rows="3"></textarea>
+                <i className="fa fa-file-o"></i> &nbsp;&nbsp;&nbsp;
+                <i className="fa fa-file-image-o"></i>
+                <button id="send" onClick={this.send} className="btn waves-effect waves-light black">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      )
+
+    }
   }
 }
-  
 
 Dashboard.propTypes = {
   logoutUser: PropTypes.func.isRequired,
