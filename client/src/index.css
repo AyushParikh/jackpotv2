@@ -459,11 +459,15 @@ body::-webkit-scrollbar-thumb {
   overflow-y: scroll;
   height: 100%;
   max-height: 450px;
+  
 }
 .chat .chat-history {
   margin-bottom: 15px;
 }
 
+.chat {
+  width: 500px;
+}
 
 
 .chat .chat-history #message-data-time {

@@ -789,6 +789,16 @@ class Toggle extends Component {
     var spanname = document.createElement("span");
     var divmessage = document.createElement("div");
 
+    var message_split = message.split("");
+
+    message='';
+    for (var i = 0; i< message_split.length; i++){
+      message+=message_split[i];
+      if (message.length%46===0){
+        message+="\n";
+      }
+    }
+
     if (from !== this.state.user.name){
       li.id = "clearfix";
       
