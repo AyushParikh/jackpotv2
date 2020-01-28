@@ -644,3 +644,22 @@ body::-webkit-scrollbar-thumb {
   border-width: 10px;
   margin-left: -10px;
 }
+
+.section-light {
+  background-color: #f7f9f9;
+  padding: 15vh;
+  color: #4c4c4c;
+  width: 100%;
+  width: 100vw;
+  text-align: left;
+  vertical-align: middle;
+  line-height: 40px;
+  align-items:center
+}
+
+.underline { text-decoration: underline; 
+  font-size: x-large;
+}
+
+
+
