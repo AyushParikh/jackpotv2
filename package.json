@@ -32,5 +32,8 @@
     "sweetalert2": "^9.5.4",
     "validator": "^10.9.0",
     "ws": "^7.2.1"
+  },
+  "devDependencies": {
+    "jscrambler": "^5.4.0"
   }
 }
