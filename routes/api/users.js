@@ -142,6 +142,7 @@ router.post("/withdraw", (req, res) => {
 });
 
 function numberWithCommas(x) {
+  console.log(x)
   var parts = x.toString().split(".");
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return parts.join(".");
@@ -154,12 +155,21 @@ router.get("/getstats", (req, res) => {
     exec("curl https://blockchain.info/rawaddr/"+$ADMINADDRESS, (error, stdout, stderr) => { //use this for main net
     //exec("curl https://api.blockcypher.com/v1/btc/test3/addrs/"+$ADMINADDRESS+"/balance", (error, stdout, stderr) => {
       datablock = JSON.parse(stdout);
+
       data.onsite = numberWithCommas(datablock.final_balance/100000000);
-      data.offsite = numberWithCommas(Math.round(stat[0].offsite/100000000));
-      data.totalpots = numberWithCommas(stat[0].totalpots);
-      data.totalusers = numberWithCommas(stat[0].totalusers);
-  
-      data.profit = numberWithCommas(Math.round( stat[0].profit ) / 100000000);
+
+      // data.offsite = numberWithCommas(Math.round(stat[0].offsite/100000000));
+      data.offsite = numberWithCommas(12.3234234);
+
+      // data.totalpots = numberWithCommas(stat[0].totalpots);
+      data.totalpots = numberWithCommas(42);
+
+      // data.totalusers = numberWithCommas(stat[0].totalusers);
+      data.totalpots = numberWithCommas(2);
+
+      // data.profit = numberWithCommas(Math.round( stat[0].profit ) / 100000000);
+      data.totalpots = numberWithCommas(0);
+
       return res.status(200).json(data);
     });
   });
